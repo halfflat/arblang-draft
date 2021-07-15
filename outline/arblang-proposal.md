@@ -41,8 +41,9 @@ Allowing multiple symbols in these instances allows flexibility in input environ
 
 Outside of string literals (see below), all non-empty sequences of whitespace are treated equivalently.
 
-| &lt;whitespace&gt; ::= &lt;whitespace-char&gt;+
-| &lt;whitespace-char&gt; ::= any character with the Unicode property `White_Space`.
+> &lt;whitespace&gt; ::= &lt;whitespace-char&gt;+
+>
+> &lt;whitespace-char&gt; ::= any character with the Unicode property `White_Space`.
 
 ## Identifiers
 
@@ -69,12 +70,15 @@ Expression scope
 Valid identifier names are of the form:
 
 > &lt;identifier&gt; ::= &lt;initial-id-symbol&gt; [&lt;id-symbol&gt;]*
+>
 > &lt;id-symbol&gt; ::= &lt;initial-id-symbol&gt; | &lt;other-id-symbol&gt;
 
 Identifiers broadly follow the conventions of Python, where below, braces are used to denote Unicode character classes or properties.
 
 > &lt;initial-id-symbol&gt; ::= {L} | {Nl} | {Other_ID_Start}
+>
 > &lt;other-id-symbol&gt; ::= {Nd} | {Mn} | {Mc} | {Pc} | &lt;prime-mark&gt;
+>
 > &lt;prime-mark&gt; ::= `'` | `ʹ` U+02B9 MODIFIER LETTER PRIME | `′` U+2032 PRIME
 
 &lt;initial-id-symbol&gt; can be any character in the Letter 'L' category, in Number-letter 'Nl' category, or any character with the 'Other_ID_Start' property, which corresponds to the permitted Python starting characters with the exception of the underscore.
@@ -96,6 +100,7 @@ A qualified identifier is a particular sort of expression that identifies a defi
 Some objects can take arbitrary labels rather than identifiers, namely chemical species and interface names. These are represented by string literals:
 
 > &lt;string-literal&gt; ::= `"` [ `\"` | `\\` | &lt;unescaped-char&gt; ]* `"`
+>
 > &lt;unescaped-char&gt; ::= any character other than `"` or `\`
 
 Whitespace within a string literal is significant, and a string literal can span multiple lines, though using such as names seems like a terrible idea.
@@ -113,49 +118,49 @@ Modules are used to collect parameters, constants, and function definitions; int
 Syntax:
 
 > &lt;module-defn&gt; ::= `module` &lt;identifier&gt; `{` [&lt;parameter-defn&gt; | &lt;constant-defn&gt; | &lt;record-type-alias&gt; | &lt;function-defn&gt; | &lt;module-import&gt; ]* `}`
-&gt;
+>
 > &lt;parameter-defn&gt; ::= `parameter` [&lt;type-expr&gt;] &lt;identifier&gt; `=` &lt;expression&gt; `;`
-&gt;
+>
 > &lt;constant-defn&gt; ::= `constant` [&lt;type-expr&gt;] &lt;identifier&gt; `=` &lt;expression&gt; `;`
-&gt;
+>
 > &lt;record-alias-defn&gt; ::= `record` &lt;identifier&gt; &lt;record-type-body&gt;
-&gt;
+>
 > &lt;function-defn&gt; ::= `function` &lt;identifier&gt; `(` [ &lt;fn-arg&gt; [`,` &lt;fn-arg&gt;]*  `)` `{` &lt;expression&gt; `}`
-&gt;
+>
 > &lt;fn-arg&gt; ::= &lt;type-expr&gt; &lt;identifier&gt;
-&gt;
+>
 > &lt;module-import&gt; ::= `import` &lt;identifier&gt; [ `as` &lt;identifier&gt; ]
 
 Types, records and expressions are described below.
 
 > &lt;interface-defn&gt; ::= `interface` &lt;interface-class&gt; &lt;string-literal&gt; `{` [ [`density`] &lt;pararameter-defn&gt; | &lt;constant-defn&gt; | &lt;record-alias-defn&gt; | &lt;function-defn&gt; | &lt;module-import&gt; | [`density`] &lt;parameter-alias&gt; | &lt;binding&gt; | &lt;initial-decl&gt; | &lt;regime-defn&gt; | &lt;regime-internal-decl&gt;]* `}`
-&gt;
+>
 > &lt;parameter-alias&gt; ::= [`density`] `parameter` [&lt;type-expr&gt;] &lt;qualified-identifier&gt; [ `as` &lt;identifier&gt; ] `;`
-&gt;
+>
 > &lt;binding&gt; ::= `bind` [&lt;type-expr&gt;] &lt;identifer&gt; = &lt;bindable-state&gt; `;`
-&gt;
+>
 > &lt;initial-defn&gt; ::= `initial` [`regime` &lt;qualified-identifier&gt;] [ &lt;initial-post-expr&gt; `from` ] [&lt;type-expr&gt;] `state` `=` &lt;expression&gt; `;`
-&gt;
+>
 > &lt;initial-post-expr&gt; ::= `steady` | `evolve` `for` &lt;expression&gt;
-&gt;
+>
 > &lt;regime-defn&gt; ::= `regime` &lt;identifier&gt; `{` [ &lt;regime-internal-defn&gt; | &lt;regime-defn&gt; ] `}`
-&gt;
+>
 > &lt;regime-internal-defn&gt; ::= `evolvution` `=` &lt;expression&gt; `;` | &lt;when-defn&gt; `;` | &lt;effect-defn&gt; `;`
-&gt;
+>
 > &lt;when-defn&gt; ::= `when` &lt;when-condition&gt; [ `regime` &lt;qualified-identifier&gt; ] `state` `=` &lt;expression&gt; `;`
-&gt;
+>
 > &lt;when-condition&gt; ::= &lt;expression&gt; | `event` &lt;identifier&gt; | `post` &lt;identifier&gt;
-&gt;
+>
 > &lt;effect-defn&gt; ::= &lt;effect&gt; = &lt;expression&gt; `;`
 
 The sets of possible bindable states, effects, and interface classes are finite, but may be extended in the future. Not all bindable states or effects are permissible in all interface classes. `density` parameters are intended to describe parameters that may be linearly interpolated, and are only supported in interface classes where this is meaningful.
 
 > &lt;interface-class&gt; ::= `density` | `discrete` | `concentration`
-&gt;
+>
 > &lt;bindable-state&gt; ::= `state` | `membrane` `potential` | `temperature` | (`current` `density` | `molar` `flux`) &lt;species-name&gt;) | (`internal` | `external`) `concentration` &lt;species-name&gt; | `charge` &lt;species-name&gt;
-&gt;
+>
 > &lt;effect&gt; ::= `current` `density` [&lt;species-name&gt;] | `molar` `flow` `rate` &lt;species-name&gt; | `current` [&lt;species-name&gt;] | `molar` `flux` &lt;species-name&gt; | (`internal` | `external`) `concentration`
-&gt;
+>
 > &lt;species-name&gt; ::= &lt;string-literal&gt;
 
 ### Module semantics
@@ -312,21 +317,23 @@ Quantities represent physical quantities, which in turn comprise a magnitude and
 A quantity type is defined as a product term of named quantities such as voltage, time, resistance, etc. The set of named quantities is predefined, and can't be extended within arblang. Quantity syntax:
 
 > &lt;quantity-expr&gt; ::= &lt;quantity-name&gt; | &lt;quantity-product&gt; | &lt;quantity-quotient&gt; | &lt;quantity-power&gt;
-&gt;
+>
 > &lt;quantity-product&gt; ::= &lt;quantity-expr&gt; &lt;product-symbol&gt; &lt;quantity-expr&gt;
-&gt;
+>
 > &lt;product-symbol&gt; ::= &lt;whitespace&gt; | &lt;multiplication-dot&gt;
-&gt;
+>
 > &lt;quantity-quotient&gt; ::= &lt;quantity-term&gt; &lt;division-slash&gt; &lt;quantity-term&gt;
-&gt;
+>
 > &lt;quantity-power&gt; ::= &lt;quantity&gt; `^` &lt;integer&gt; | &lt;quantity&gt; &lt;integer-superscript&gt;
-&gt;
+>
 > &lt;integer&gt; ::= [&lt;minus-sign&gt;] &lt;digit&gt;+
+>
 > &lt;digit&gt; ::= `0` | `1` | ... | `9`
-&gt;
+>
 > &lt;integer-superscript&gt; ::= [ `⁻` ] &lt;digit-superscript&gt;+
+>
 > &lt;digit-superscript&gt; ::= `⁰` | `¹` | ,,, | `⁹`
-&gt;
+>
 > &lt;quantity-name&gt; ::= `real` | `length` | `mass` | `time` | `current` | `amount` |
 >   `temperature` | `charge` | `frequency` | `voltage` | `resistance` |
 >   `capacitance` | `force` | `energy` | `power` | `area` | `volume` | `concentration`
@@ -382,9 +389,13 @@ let voltage v = 23 * 10 mV - 2 μV;
 A record is a labelled unordered tuple of values which are either quantities or records themselves. A record may not have two fields of the same name. A record type specification has the syntax:
 
 > &lt;record-type-expr&gt; ::= &lt;record-type&gt; | &lt;record-alias&gt; | &lt;derivative-record&gt;
+>
 > &lt;record-alias&gt; ::= &lt;identifier&gt;
+>
 > &lt;record-type&gt; ::= `record` &lt;record-type-body&gt;
+>
 > &lt;record-type-body&gt; ::= `{` &lt;record-field&gt;* `}`
+>
 > &lt;record-field&gt; ::= &lt;type-expr&gt; &lt;identifier&gt; `;`
 
 A record alias is an identifier that has bound to a record type in a record alias definition (see above).
@@ -428,14 +439,22 @@ description. The unit descriptions follow a grammar analagous to the quantity
 descriptions (see above).
 
 > &lt;value-literal&gt; ::= &lt;number&gt; | &lt;number&gt; &lt;whitespace&gt; &lt;unit-term&gt;
+>
 > &lt;unit-term&gt; ::= &lt;unit&gt; | &lt;unit-product&gt; | &lt;unit-quotient&gt; | &lt;unit-power&gt;
+>
 > &lt;unit-product&gt; ::= &lt;unit-term&gt; &lt;multiplication-dot&gt; &lt;unit-term&gt; | &lt;unit-term&gt; &lt;whitespace&gt; &lt;unit-term&gt;
+>
 > &lt;unit-quotient&gt; ::= &lt;unit-term&gt; &lt;division-slash&gt; &lt;unit-term&gt;
+>
 > &lt;unit-power&gt; ::= &lt;unit-term&gt; `^` &lt;integer&gt; | &lt;unit-term&gt; &lt;integer-superscript&gt;
+>
 > &lt;unit&gt; ::= [ &lt;si-prefix-symbol&gt; ] &lt;si-unit-symbol&gt; | &lt;convenience-unit&gt;
+>
 > &lt;si-prefix-symbol&gt; ::= `Y` | `Z` | `E` | `P` | `T` | `G` | `M` | `k` | `h` | `da` | `d` | `c` | `m` |
 >    `μ` | `µ` | `u` | `n` | `p` | `f` | `a` | `z` | `y`
+>
 > &lt;si-unit-symbol&gt; ::= `s` | `m` | `g` | `A` | `K` | `mol` | `L` | `l` | `Hz` | `N` | `J` | `Pa` | `W` | `C` | `F` | `V` | `Ω` | `S` | `kat` | ...
+>
 > &lt;convienience-unit&gt; ::= `°C` | `°F` | ...
 
 (Where &lt;number&gt; stands for the regular sorts of decimal representation supported by e.g. JSON.)
@@ -478,7 +497,9 @@ circumstances.
 A record values can be specified by the field values in a record construction:
 
 > &lt;record-construction&gt; ::= `{` &lt;record-field-binding&gt;* `}`
+>
 > &lt;record-field-binding&gt; ::= [ &lt;type-expr&gt; ] &lt;identifier&gt; `=` &lt;field-value&gt; `;`
+>
 > &lt;field-value&gt; ::= &lt;expression&gt;
 
 As an example, the following expression has the type `record { voltage a; real b; }`
