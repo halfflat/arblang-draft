@@ -25,13 +25,13 @@ The character representation of tokens is not unique: character sequences that a
 
 &lt;ohm-symbol&gt;
   ~ U+03A9 `Ω` GREEK LETTER CAPITAL OMEGA or U+2126 `Ω` OHM SIGN.
-  
+
 &lt;reaction-right&gt;
   ~ U+2192 `→` RIGHTWARDS ARROW or the sequence `->`.
-  
+
 &lt;reaction-left&gt;
   ~ U+2190 `←` LEFTWARDS ARROW or the sequence `<-`.
-  
+
 &lt;reaction-rightleft&gt;
   ~ U+21C4 `⇄` RIGHT ARROW OVER LEFT ARROW or the sequence `<->`.
 
@@ -41,9 +41,9 @@ Allowing multiple symbols in these instances allows flexibility in input environ
 
 Outside of string literals (see below), all non-empty sequences of whitespace are treated equivalently.
 
-| <whitespace> ::= <whitespace-char>+
-| <whitespace-char> ::= any character with the Unicode property `White_Space`.
-    
+| &lt;whitespace&gt; ::= &lt;whitespace-char&gt;+
+| &lt;whitespace-char&gt; ::= any character with the Unicode property `White_Space`.
+
 ## Identifiers
 
 An identifier is a label used to denote a function, a module, an imported module, a constant, a parameter, a function argument, an external binding, a record field, a record type alias, or a local value binding.
@@ -65,103 +65,103 @@ Regime scope
 Expression scope
   ~ `let` and `with` binding expressions introduce new identifiers
      that have as scope the final expression in the binding.
-    
+
 Valid identifier names are of the form:
 
-> <identifier> ::= <initial-id-symbol> [<id-symbol>]*
-> <id-symbol> ::= <initial-id-symbol> | <other-id-symbol>
+> &lt;identifier&gt; ::= &lt;initial-id-symbol&gt; [&lt;id-symbol&gt;]*
+> &lt;id-symbol&gt; ::= &lt;initial-id-symbol&gt; | &lt;other-id-symbol&gt;
 
 Identifiers broadly follow the conventions of Python, where below, braces are used to denote Unicode character classes or properties.
 
-> <initial-id-symbol> ::= {L} | {Nl} | {Other_ID_Start}
-> <other-id-symbol> ::= {Nd} | {Mn} | {Mc} | {Pc} | <prime-mark>
-> <prime-mark> ::= `'` | `ʹ` U+02B9 MODIFIER LETTER PRIME | `′` U+2032 PRIME
+> &lt;initial-id-symbol&gt; ::= {L} | {Nl} | {Other_ID_Start}
+> &lt;other-id-symbol&gt; ::= {Nd} | {Mn} | {Mc} | {Pc} | &lt;prime-mark&gt;
+> &lt;prime-mark&gt; ::= `'` | `ʹ` U+02B9 MODIFIER LETTER PRIME | `′` U+2032 PRIME
 
 &lt;initial-id-symbol&gt; can be any character in the Letter 'L' category, in Number-letter 'Nl' category, or any character with the 'Other_ID_Start' property, which corresponds to the permitted Python starting characters with the exception of the underscore.
 
 &lt;other-id-symbol&gt; includes digits, underscores and similar punctuation, but also &lt;prime-mark&gt;, which is used to denote a derivative.
-    
+
 Unlike Python, characters that are only _compatibility_ equivalent to acceptable identifier symbols are not permitted. In particular, superscript numerals are not permitted within an identifier.
-    
+
 Two identifiers are equivalent if they have the same canonical representation, which corresponds to the Unicode NFKC normalization with the additional mapping of any character in &lt;prime-mark&gt; to `'`.
 
 ### Qualified identifier
-    
+
 A qualified identifier is a particular sort of expression that identifies a definition in an imported module, or a sub-regime within a regime.
-    
-> <qualified-identifier> ::= <identifier> | <qualified-identifier> `.` <identifier>
+
+> &lt;qualified-identifier&gt; ::= &lt;identifier&gt; | &lt;qualified-identifier&gt; `.` &lt;identifier&gt;
 
 ## Names
-    
+
 Some objects can take arbitrary labels rather than identifiers, namely chemical species and interface names. These are represented by string literals:
 
-> <string-literal> ::= `"` [ `\"` | `\\` | <unescaped-char> ]* `"`
-> <unescaped-char> ::= any character other than `"` or `\`
+> &lt;string-literal&gt; ::= `"` [ `\"` | `\\` | &lt;unescaped-char&gt; ]* `"`
+> &lt;unescaped-char&gt; ::= any character other than `"` or `\`
 
 Whitespace within a string literal is significant, and a string literal can span multiple lines, though using such as names seems like a terrible idea.
 
 ## Keywords
-    
+
 Keywords are used to introduce various definitions and declarations both at top level and within modules, interfaces, and functions. Keywords are syntactically identifiers and must be separated from a subsequent &lt;id-symbol&gt; by &lt;whitespace&gt;. In the syntax descriptions below, keywords are written as literals in a minor abuse of notation.
-    
+
 Keywords are reserved identifiers only where necessary to disambiguate the syntax; a record type alias, for example, can also be called `state` even though `state` is a keyword.
 
 ## Modules and interfaces
-    
+
 Modules are used to collect parameters, constants, and function definitions; interfaces are used to define a particular sort of Arbor functionality, such as ion channel or gap junction dynamics. Module and interface definitions can only be provided at top level.
-    
+
 Syntax:
 
-> <module-defn> ::= `module` <identifier> `{` [<parameter-defn> | <constant-defn> | <record-type-alias> | <function-defn> | <module-import> ]* `}`
->
-> <parameter-defn> ::= `parameter` [<type-expr>] <identifier> `=` <expression> `;`
->
-> <constant-defn> ::= `constant` [<type-expr>] <identifier> `=` <expression> `;`
->
-> <record-alias-defn> ::= `record` <identifier> <record-type-body>
->
-> <function-defn> ::= `function` <identifier> `(` [ <fn-arg> [`,` <fn-arg>]*  `)` `{` <expression> `}`
->
-> <fn-arg> ::= <type-expr> <identifier>
->
-> <module-import> ::= `import` <identifier> [ `as` <identifier> ]
+> &lt;module-defn&gt; ::= `module` &lt;identifier&gt; `{` [&lt;parameter-defn&gt; | &lt;constant-defn&gt; | &lt;record-type-alias&gt; | &lt;function-defn&gt; | &lt;module-import&gt; ]* `}`
+&gt;
+> &lt;parameter-defn&gt; ::= `parameter` [&lt;type-expr&gt;] &lt;identifier&gt; `=` &lt;expression&gt; `;`
+&gt;
+> &lt;constant-defn&gt; ::= `constant` [&lt;type-expr&gt;] &lt;identifier&gt; `=` &lt;expression&gt; `;`
+&gt;
+> &lt;record-alias-defn&gt; ::= `record` &lt;identifier&gt; &lt;record-type-body&gt;
+&gt;
+> &lt;function-defn&gt; ::= `function` &lt;identifier&gt; `(` [ &lt;fn-arg&gt; [`,` &lt;fn-arg&gt;]*  `)` `{` &lt;expression&gt; `}`
+&gt;
+> &lt;fn-arg&gt; ::= &lt;type-expr&gt; &lt;identifier&gt;
+&gt;
+> &lt;module-import&gt; ::= `import` &lt;identifier&gt; [ `as` &lt;identifier&gt; ]
 
 Types, records and expressions are described below.
 
-> <interface-defn> ::= `interface` <interface-class> <string-literal> `{` [ [`density`] <pararameter-defn> | <constant-defn> | <record-alias-defn> | <function-defn> | <module-import> | [`density`] <parameter-alias> | <binding> | <initial-decl> | <regime-defn> | <regime-internal-decl>]* `}`
->
-> <parameter-alias> ::= [`density`] `parameter` [<type-expr>] <qualified-identifier> [ `as` <identifier> ] `;`
->
-> <binding> ::= `bind` [<type-expr>] <identifer> = <bindable-state> `;`
->
-> <initial-defn> ::= `initial` [`regime` <qualified-identifier>] [ <initial-post-expr> `from` ] [<type-expr>] `state` `=` <expression> `;`
->
-> <initial-post-expr> ::= `steady` | `evolve` `for` <expression>
->
-> <regime-defn> ::= `regime` <identifier> `{` [ <regime-internal-defn> | <regime-defn> ] `}`
->
-> <regime-internal-defn> ::= `evolvution` `=` <expression> `;` | <when-defn> `;` | <effect-defn> `;`
->
-> <when-defn> ::= `when` <when-condition> [ `regime` <qualified-identifier> ] `state` `=` <expression> `;`
->
-> <when-condition> ::= <expression> | `event` <identifier> | `post` <identifier>
->
-> <effect-defn> ::= <effect> = <expression> `;`
-    
+> &lt;interface-defn&gt; ::= `interface` &lt;interface-class&gt; &lt;string-literal&gt; `{` [ [`density`] &lt;pararameter-defn&gt; | &lt;constant-defn&gt; | &lt;record-alias-defn&gt; | &lt;function-defn&gt; | &lt;module-import&gt; | [`density`] &lt;parameter-alias&gt; | &lt;binding&gt; | &lt;initial-decl&gt; | &lt;regime-defn&gt; | &lt;regime-internal-decl&gt;]* `}`
+&gt;
+> &lt;parameter-alias&gt; ::= [`density`] `parameter` [&lt;type-expr&gt;] &lt;qualified-identifier&gt; [ `as` &lt;identifier&gt; ] `;`
+&gt;
+> &lt;binding&gt; ::= `bind` [&lt;type-expr&gt;] &lt;identifer&gt; = &lt;bindable-state&gt; `;`
+&gt;
+> &lt;initial-defn&gt; ::= `initial` [`regime` &lt;qualified-identifier&gt;] [ &lt;initial-post-expr&gt; `from` ] [&lt;type-expr&gt;] `state` `=` &lt;expression&gt; `;`
+&gt;
+> &lt;initial-post-expr&gt; ::= `steady` | `evolve` `for` &lt;expression&gt;
+&gt;
+> &lt;regime-defn&gt; ::= `regime` &lt;identifier&gt; `{` [ &lt;regime-internal-defn&gt; | &lt;regime-defn&gt; ] `}`
+&gt;
+> &lt;regime-internal-defn&gt; ::= `evolvution` `=` &lt;expression&gt; `;` | &lt;when-defn&gt; `;` | &lt;effect-defn&gt; `;`
+&gt;
+> &lt;when-defn&gt; ::= `when` &lt;when-condition&gt; [ `regime` &lt;qualified-identifier&gt; ] `state` `=` &lt;expression&gt; `;`
+&gt;
+> &lt;when-condition&gt; ::= &lt;expression&gt; | `event` &lt;identifier&gt; | `post` &lt;identifier&gt;
+&gt;
+> &lt;effect-defn&gt; ::= &lt;effect&gt; = &lt;expression&gt; `;`
+
 The sets of possible bindable states, effects, and interface classes are finite, but may be extended in the future. Not all bindable states or effects are permissible in all interface classes. `density` parameters are intended to describe parameters that may be linearly interpolated, and are only supported in interface classes where this is meaningful.
-    
-> <interface-class> ::= `density` | `discrete` | `concentration`
->
-> <bindable-state> ::= `state` | `membrane` `potential` | `temperature` | (`current` `density` | `molar` `flux`) <species-name>) | (`internal` | `external`) `concentration` <species-name> | `charge` <species-name>
->
-> <effect> ::= `current` `density` [<species-name>] | `molar` `flow` `rate` <species-name> | `current` [<species-name>] | `molar` `flux` <species-name> | (`internal` | `external`) `concentration`
->
-> <species-name> ::= <string-literal>
+
+> &lt;interface-class&gt; ::= `density` | `discrete` | `concentration`
+&gt;
+> &lt;bindable-state&gt; ::= `state` | `membrane` `potential` | `temperature` | (`current` `density` | `molar` `flux`) &lt;species-name&gt;) | (`internal` | `external`) `concentration` &lt;species-name&gt; | `charge` &lt;species-name&gt;
+&gt;
+> &lt;effect&gt; ::= `current` `density` [&lt;species-name&gt;] | `molar` `flow` `rate` &lt;species-name&gt; | `current` [&lt;species-name&gt;] | `molar` `flux` &lt;species-name&gt; | (`internal` | `external`) `concentration`
+&gt;
+> &lt;species-name&gt; ::= &lt;string-literal&gt;
 
 ### Module semantics
-    
+
 TODO: explain parameters; module imports.
-    
+
 ### Interface semantics
 
 An interface provides, generally:
@@ -169,7 +169,7 @@ An interface provides, generally:
 1. A _state_ that evolves over time, as a function of various local cellular quantities.
 2. A set of user-settable parameters.
 3. A set of _effects_ that the state imposes locally upon the cell.
-    
+
 The initial state and its type is given by the `initial` declaration. For example,
 ```
     initial state = { a = 0 S; b = 0 S; };
@@ -180,15 +180,15 @@ value has zero in both fields.
 The initial state can be qualified with `steady` or `evolve for` to indicate that the provided value should be integrated over time by some given value or until steady state before being used as an initial value. The evolution is that given by subsequent `evolve` declarations. The degree to which this is supported in an implementation will depend very much on the nature of the evolution function(s).
 
 Evolution is governed by one or more _regimes_. In the simplest case, there is just the one, default regime, but more generally, multiple regimes may be defined, and transitions between them can be triggered by boolean-valued expressions that are a function of state and bound cell quantities, or by pre- or post-synaptic events. Regime definitions can be nested, and an inner regime definition inherits any triggers from the enclosing scope, and the evolution function from the enclosing scope as well, if it is not overridden. The initial regime can be specified in the `initial` definition. The default regime has no name, and so cannot be a target of `regime` clauses in a `when` definition.
-    
+
 The evolution function is defined with the `evolution` definition, and there may only be one `evolution` per regime. The expression on the rhs must have type equal to the 'derivative' type of the state. The derivative of a quantity is that quantity divided by time; the derivative of a record type is the record type where each field _x_ is replaced by a field _x'_ with type the derivative type of _x_. See the discusion under record types below for more details.
-    
+
 Effects tie the state to the cell, defining how the state determines ionic currents or species flows, or how it governs species concentrations.
-    
+
 Parameter definitions are unique to the interface — they are not visible from other interfaces — and can be defined with a default value in the interface definition, or can expose a parameter defined in an imported module.
 
 If the interface doesn't require any evolving state, it can omit the `initial` and `evolution` definitions.
-    
+
 #### Density models
 
 Density models represent a process which is distributed over an areal extent of the cell membrane. Parameters defined in density models may be labelled as `density` parameters — such parameters are declared to be safe to interpolate, and can be used with spatitally varying scaling, for example.
@@ -198,11 +198,11 @@ Bindable states: state; membrane potential; temperature; internal/external conce
 Effects: current density (non-specific); current density "_species_"; molar flux "_species_".
 
 Events: only boolean-valued expressions.
-    
+
 #### Discrete models
-    
+
 Discrete models capture localized effects and can react in response to incoming spike events or post-synaptic spike detection events. They may not have `density` parameters.
-    
+
 Bindable states: state; membrane potential; temperature; internal/external concentration "_species_"; charge "_species_".
 
 Effects: current (non-specific); current "_species_"; molar flow rate "_species_".
@@ -214,7 +214,7 @@ Events: any.
 Concentration models determine the internal and/or external concentration of a species over time.
 As specified, only one concentration model can be used to determine the state of a species in any
 given region of a cell. The initial value of the state determines the initial value(s) of the concentration.
-    
+
 Bindable states: state; membrane potential; temperature; current density "_species_"; molar flux "_species_"; charge "_species_". Note that the concentrations themselves are _not_ bindable.
 
 Effects: internal/external concentration "_species_".
@@ -228,7 +228,7 @@ There are a couple of problems with specifying concentration evolution with conc
 * Initial concentration is determined by the model, disregarding any user-supplied initial concentration data.
 
 A cleaner approach would be to present a concentration model in terms of the change in concentration over time. Then the initial value would be user-specified, and multiple concentration model contributions could overlap.
-    
+
 Example, concentration model:
 ```
 interface concentration "CaDynamics" {
@@ -236,9 +236,9 @@ interface concentration "CaDynamics" {
     parameter time decay = 80 ms;
     parameter length detph = 0.1 µm;
     parameter concentration steady_conc = 1.0e-4 mmol/L;
-    
+
     initial state = steady_conc;
-    
+
     bind ca_conc = state;
     bind ca_flux = molar flux "ca";
     evolution = -ca_flux*gamma/depth - (ca_conc-steady_conc)/decay;
@@ -254,7 +254,7 @@ interface concentration "CaDynamics" {
     parameter time decay = 80 ms;
     parameter length detph = 0.1 µm;
     parameter concentration steady_conc = 1.0e-4 mmol/L;
-    
+
     bind ca_flux = molar flux "ca";
     bind ca_conc = internal concentration "ca";
     effect internal concentration rate "ca" =
@@ -267,7 +267,7 @@ The alternative model could have been split into two different models, to be app
 interface concentration "CaUnbuffered" {
     parameter real gamma = 0.5;
     parameter length depth = 0.1 µm;
-    
+
     bind ca_flux = molar flux "ca";
     effect internal concentration rate "ca" = -ca_flux*gamma/depth;
 }
@@ -275,16 +275,16 @@ interface concentration "CaUnbuffered" {
 interface concentration "CaBuffered" {
     parameter concentration steady_conc = 1.0e-4 mmol/L;
     parameter time decay = 80 ms;
-    
+
     bind ca_conc = internal concentration "ca";
     effect internal concentration rate "ca" = -(ca_conc-steady_conc)/decay;
 }
 ```
 
 ### Function definitions
-    
+
 **TODO**
-    
+
 ## Types and type expressions
 
 Every expression has a type, which is either:
@@ -303,7 +303,7 @@ Type descriptions are optional in contexts where the type can be deduced:
 
 A type expression &lt;type-expr&gt; describes a type; different type expressions may describe the same type.
 
-| <type-expr> ::= `boolean` | <quantity-expr> | <record-type-expr>
+| &lt;type-expr&gt; ::= `boolean` | &lt;quantity-expr&gt; | &lt;record-type-expr&gt;
 
 ### Quantities
 
@@ -311,23 +311,23 @@ Quantities represent physical quantities, which in turn comprise a magnitude and
 
 A quantity type is defined as a product term of named quantities such as voltage, time, resistance, etc. The set of named quantities is predefined, and can't be extended within arblang. Quantity syntax:
 
-> <quantity-expr> ::= <quantity-name> | <quantity-product> | <quantity-quotient> | <quantity-power>
->
-> <quantity-product> ::= <quantity-expr> <product-symbol> <quantity-expr>
->
-> <product-symbol> ::= <whitespace> | <multiplication-dot>
->
-> <quantity-quotient> ::= <quantity-term> <division-slash> <quantity-term>
->
-> <quantity-power> ::= <quantity> `^` <integer> | <quantity> <integer-superscript>
->
-> <integer> ::= [<minus-sign>] <digit>+
-> <digit> ::= `0` | `1` | ... | `9`
->
-> <integer-superscript> ::= [ `⁻` ] <digit-superscript>+
-> <digit-superscript> ::= `⁰` | `¹` | ,,, | `⁹`
->
-> <quantity-name> ::= `real` | `length` | `mass` | `time` | `current` | `amount` |
+> &lt;quantity-expr&gt; ::= &lt;quantity-name&gt; | &lt;quantity-product&gt; | &lt;quantity-quotient&gt; | &lt;quantity-power&gt;
+&gt;
+> &lt;quantity-product&gt; ::= &lt;quantity-expr&gt; &lt;product-symbol&gt; &lt;quantity-expr&gt;
+&gt;
+> &lt;product-symbol&gt; ::= &lt;whitespace&gt; | &lt;multiplication-dot&gt;
+&gt;
+> &lt;quantity-quotient&gt; ::= &lt;quantity-term&gt; &lt;division-slash&gt; &lt;quantity-term&gt;
+&gt;
+> &lt;quantity-power&gt; ::= &lt;quantity&gt; `^` &lt;integer&gt; | &lt;quantity&gt; &lt;integer-superscript&gt;
+&gt;
+> &lt;integer&gt; ::= [&lt;minus-sign&gt;] &lt;digit&gt;+
+> &lt;digit&gt; ::= `0` | `1` | ... | `9`
+&gt;
+> &lt;integer-superscript&gt; ::= [ `⁻` ] &lt;digit-superscript&gt;+
+> &lt;digit-superscript&gt; ::= `⁰` | `¹` | ,,, | `⁹`
+&gt;
+> &lt;quantity-name&gt; ::= `real` | `length` | `mass` | `time` | `current` | `amount` |
 >   `temperature` | `charge` | `frequency` | `voltage` | `resistance` |
 >   `capacitance` | `force` | `energy` | `power` | `area` | `volume` | `concentration`
 
@@ -339,19 +339,19 @@ the grammar. These map to ISQ quantities as follows:
 
 `amount`
   ~ amount of substance
-    
+
 `current`
   ~ electic current
-    
+
 `time`
   ~ time duration
-    
+
 `temperature`
   ~ thermodynamic temperature
-    
+
 `charge`
   ~ electric charge
-    
+
 `resistance`
   ~ electric resistance
 
@@ -381,22 +381,22 @@ let voltage v = 23 * 10 mV - 2 μV;
 
 A record is a labelled unordered tuple of values which are either quantities or records themselves. A record may not have two fields of the same name. A record type specification has the syntax:
 
-> <record-type-expr> ::= <record-type> | <record-alias> | <derivative-record>
-> <record-alias> ::= <identifier>
-> <record-type> ::= `record` <record-type-body>
-> <record-type-body> ::= `{` <record-field>* `}`
-> <record-field> ::= <type-expr> <identifier> `;`
+> &lt;record-type-expr&gt; ::= &lt;record-type&gt; | &lt;record-alias&gt; | &lt;derivative-record&gt;
+> &lt;record-alias&gt; ::= &lt;identifier&gt;
+> &lt;record-type&gt; ::= `record` &lt;record-type-body&gt;
+> &lt;record-type-body&gt; ::= `{` &lt;record-field&gt;* `}`
+> &lt;record-field&gt; ::= &lt;type-expr&gt; &lt;identifier&gt; `;`
 
 A record alias is an identifier that has bound to a record type in a record alias definition (see above).
-    
+
 #### Record type aliases and derivative records.
 
 See the Modules and Interfaces section for the definition syntax.
 
 When an identifier _x_ is bound as a record alias, then the symbols _x_', _x_'', etc. are also bound as record aliases. The alias _x_' is bound to the _time derivative_ record type of _x_.
-    
+
 If a record type has fields named F<sub>1</sub>, F<sub>2</sub>, … with types T<sub>1</sub>, T<sub>2</sub>, … then its time derivative record has fields named F<sub>1</sub>', F<sub>2</sub>', … and types T<sub>1</sub>', T<sub>2</sub>', … where T' is the time derivative record of T if T is a record, or else is the quantity T/time if T is a quantity.
-    
+
 Example: with the record aliases
 ```
     record foo { real a; length b; }
@@ -413,9 +413,9 @@ the type `bar'` is equivalent to the definition
 #### Row polymorphism
 
 A record type is a _subrecord_ of another type for every field _F_ in the first record type is also a field _G_ in the second record type with the same field name, and the type of _F_ is either the same as the type of _G_ or is a subrecord of the type of _G_.
-    
+
 **TODO:** a record supertype can be bound to a parameter or identifier with a specified record subtype.
-    
+
 ## Expressions
 
 **TODO:** Expand: an expression can be a comparison expression, an arithmetic expression, a record expression, a function expression, ...
@@ -427,18 +427,18 @@ while a non-scalar literal value is written as a decimal number followed by a un
 description. The unit descriptions follow a grammar analagous to the quantity
 descriptions (see above).
 
-> <value-literal> ::= <number> | <number> <whitespace> <unit-term>
-> <unit-term> ::= <unit> | <unit-product> | <unit-quotient> | <unit-power>
-> <unit-product> ::= <unit-term> <multiplication-dot> <unit-term> | <unit-term> <whitespace> <unit-term>
-> <unit-quotient> ::= <unit-term> <division-slash> <unit-term>
-> <unit-power> ::= <unit-term> `^` <integer> | <unit-term> <integer-superscript>
-> <unit> ::= [ <si-prefix-symbol> ] <si-unit-symbol> | <convenience-unit>
-> <si-prefix-symbol> ::= `Y` | `Z` | `E` | `P` | `T` | `G` | `M` | `k` | `h` | `da` | `d` | `c` | `m` |
+> &lt;value-literal&gt; ::= &lt;number&gt; | &lt;number&gt; &lt;whitespace&gt; &lt;unit-term&gt;
+> &lt;unit-term&gt; ::= &lt;unit&gt; | &lt;unit-product&gt; | &lt;unit-quotient&gt; | &lt;unit-power&gt;
+> &lt;unit-product&gt; ::= &lt;unit-term&gt; &lt;multiplication-dot&gt; &lt;unit-term&gt; | &lt;unit-term&gt; &lt;whitespace&gt; &lt;unit-term&gt;
+> &lt;unit-quotient&gt; ::= &lt;unit-term&gt; &lt;division-slash&gt; &lt;unit-term&gt;
+> &lt;unit-power&gt; ::= &lt;unit-term&gt; `^` &lt;integer&gt; | &lt;unit-term&gt; &lt;integer-superscript&gt;
+> &lt;unit&gt; ::= [ &lt;si-prefix-symbol&gt; ] &lt;si-unit-symbol&gt; | &lt;convenience-unit&gt;
+> &lt;si-prefix-symbol&gt; ::= `Y` | `Z` | `E` | `P` | `T` | `G` | `M` | `k` | `h` | `da` | `d` | `c` | `m` |
 >    `μ` | `µ` | `u` | `n` | `p` | `f` | `a` | `z` | `y`
-> <si-unit-symbol> ::= `s` | `m` | `g` | `A` | `K` | `mol` | `L` | `l` | `Hz` | `N` | `J` | `Pa` | `W` | `C` | `F` | `V` | `Ω` | `S` | `kat` | ...
-> <convienience-unit> ::= `°C` | `°F` | ...
+> &lt;si-unit-symbol&gt; ::= `s` | `m` | `g` | `A` | `K` | `mol` | `L` | `l` | `Hz` | `N` | `J` | `Pa` | `W` | `C` | `F` | `V` | `Ω` | `S` | `kat` | ...
+> &lt;convienience-unit&gt; ::= `°C` | `°F` | ...
 
-(Where <number> stands for the regular sorts of decimal representation supported by e.g. JSON.)
+(Where &lt;number&gt; stands for the regular sorts of decimal representation supported by e.g. JSON.)
 
 Note that `*` is _not_ permitted as a product symbol between units in this proposal. This is in accordance with SI typographical conventions and reduces the risk of misinterpretation where a literal value is used in a term together with an identifier which has the same spelling as an SI unit, e.g.
 
@@ -462,9 +462,9 @@ The type of a literal value is the quantity that is dimensionaly compatible with
 ### Comparison expressions
 
 **TODO**: Things that evaulate to `boolean`.
-    
+
 ### Arithmetic expressions
-    
+
 Arithmetic operations — multiplication, division, addition and subtraction —
 can be used to form expressions involving values provided that there is
 an agreement in quantity. Exponentiation of scalar values is freely permitted,
@@ -477,9 +477,9 @@ circumstances.
 
 A record values can be specified by the field values in a record construction:
 
-> <record-construction> ::= `{` <record-field-binding>* `}`
-> <record-field-binding> ::= [ <type-expr> ] <identifier> `=` <field-value> `;`
-> <field-value> ::= <expression>
+> &lt;record-construction&gt; ::= `{` &lt;record-field-binding&gt;* `}`
+> &lt;record-field-binding&gt; ::= [ &lt;type-expr&gt; ] &lt;identifier&gt; `=` &lt;field-value&gt; `;`
+> &lt;field-value&gt; ::= &lt;expression&gt;
 
 As an example, the following expression has the type `record { voltage a; real b; }`
 ```
@@ -489,7 +489,7 @@ where the type of the field `a` is deduced from the rhs of the binding.
 
 Record values support two operations: field access, and substitution.
 
-> <record-expr> ::= <record-value> | `(` <record-expr> `)` | <record-expr> `.` <identifier> | <record-expr> `|` <record-expr>
+> &lt;record-expr&gt; ::= &lt;record-value&gt; | `(` &lt;record-expr&gt; `)` | &lt;record-expr&gt; `.` &lt;identifier&gt; | &lt;record-expr&gt; `|` &lt;record-expr&gt;
 
 The update operation `|` takes two record values, with the rhs a subrecord of the lhs,
 and returns a record of the same type as the lhs. Each field has the value taken from the rhs
@@ -505,7 +505,7 @@ the identifier `q` is bound to the record value `{ a = 3.0; b = 20 A; }`.
 ### Binding expressions
 
 **TODO:** Refactor following for syntax, etc.
-    
+
 Let expressions are of the forms:
 ```
     let _optional type_ _identider_ = _expression1_ _expression2_;
