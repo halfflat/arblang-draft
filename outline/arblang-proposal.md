@@ -26,7 +26,7 @@ The character representation of tokens is not unique: character sequences that a
 &lt;ohm-symbol&gt;
   ~ U+03A9 `Ω` GREEK LETTER CAPITAL OMEGA or U+2126 `Ω` OHM SIGN.
 
-&lt;reaction-right&gt;
+&lt;reaction-right&gt;, &lt;result-arrow&gt;
   ~ U+2192 `→` RIGHTWARDS ARROW or the sequence `->`.
 
 &lt;reaction-left&gt;
@@ -125,7 +125,7 @@ Syntax:
 >
 > &lt;record-alias-defn&gt; ::= `record` &lt;identifier&gt; &lt;record-type-body&gt;
 >
-> &lt;function-defn&gt; ::= `function` &lt;identifier&gt; `(` [ &lt;fn-arg&gt; [`,` &lt;fn-arg&gt;]*  `)` `{` &lt;expression&gt; `}`
+> &lt;function-defn&gt; ::= `function` &lt;identifier&gt; `(` [ &lt;fn-arg&gt; [`,` &lt;fn-arg&gt;]*  `)` [ &lt;result-arrow&gt; &lt;type-expr&gt; ] `{` &lt;expression&gt; `}`
 >
 > &lt;fn-arg&gt; ::= &lt;type-expr&gt; &lt;identifier&gt;
 >
@@ -133,9 +133,11 @@ Syntax:
 
 Types, records and expressions are described below.
 
-> &lt;interface-defn&gt; ::= `interface` &lt;interface-class&gt; &lt;string-literal&gt; `{` [ [`density`] &lt;pararameter-defn&gt; | &lt;constant-defn&gt; | &lt;record-alias-defn&gt; | &lt;function-defn&gt; | &lt;module-import&gt; | [`density`] &lt;parameter-alias&gt; | &lt;binding&gt; | &lt;initial-decl&gt; | &lt;regime-defn&gt; | &lt;regime-internal-decl&gt;]* `}`
+> &lt;interface-defn&gt; ::= `interface` &lt;interface-class&gt; &lt;string-literal&gt; `{` [ &lt;pararameter-defn&gt; | &lt;export&gt; | |&lt;combined-export-parameter-defn&gt; | &lt;constant-defn&gt; | &lt;record-alias-defn&gt; | &lt;function-defn&gt; | &lt;module-import&gt; | &lt;binding&gt; | &lt;initial-decl&gt; | &lt;regime-defn&gt; | &lt;regime-internal-decl&gt;]* `}`
 >
-> &lt;parameter-alias&gt; ::= [`density`] `parameter` [&lt;type-expr&gt;] &lt;qualified-identifier&gt; [ `as` &lt;identifier&gt; ] `;`
+> &lt;export&gt; ::= `export` [`density`] `parameter` [&lt;type-expr&gt;] &lt;qualified-identifier&gt; [ `as` &lt;identifier&gt; ]
+>
+> &lt;combined-export-parameter-defn&gt; ::= `export` [`density`] <parameter-defn>
 >
 > &lt;binding&gt; ::= `bind` [&lt;type-expr&gt;] &lt;identifer&gt; = &lt;bindable-state&gt; `;`
 >
@@ -145,11 +147,11 @@ Types, records and expressions are described below.
 >
 > &lt;regime-defn&gt; ::= `regime` &lt;identifier&gt; `{` [ &lt;regime-internal-defn&gt; | &lt;regime-defn&gt; ] `}`
 >
-> &lt;regime-internal-defn&gt; ::= `evolvution` `=` &lt;expression&gt; `;` | &lt;when-defn&gt; `;` | &lt;effect-defn&gt; `;`
+> &lt;regime-internal-defn&gt; ::= `evolve` [`explicit`] [&lt;type-expr&gt;] `state'` `=` &lt;expression&gt; `;` | &lt;when-defn&gt; `;` | &lt;effect-defn&gt; `;`
 >
-> &lt;when-defn&gt; ::= `when` &lt;when-condition&gt; [ `regime` &lt;qualified-identifier&gt; ] `state` `=` &lt;expression&gt; `;`
+> &lt;when-defn&gt; ::= `when` &lt;when-condition&gt; `;` [ `regime` &lt;qualified-identifier&gt; ] `state` `=` &lt;expression&gt; `;`
 >
-> &lt;when-condition&gt; ::= &lt;expression&gt; | `event` &lt;identifier&gt; | `post` &lt;identifier&gt;
+> &lt;when-condition&gt; ::= &lt;expression&gt; | [&lt;type-expr&gt;] &lt;identifier&gt = ( `event` | `post` ) 
 >
 > &lt;effect-defn&gt; ::= &lt;effect&gt; = &lt;expression&gt; `;`
 
@@ -165,7 +167,7 @@ The sets of possible bindable states, effects, and interface classes are finite,
 
 ### Module semantics
 
-TODO: explain parameters; module imports.
+**TODO:** explain parameters; module imports.
 
 ### Interface semantics
 
@@ -186,13 +188,13 @@ The initial state can be qualified with `steady` or `evolve for` to indicate tha
 
 Evolution is governed by one or more _regimes_. In the simplest case, there is just the one, default regime, but more generally, multiple regimes may be defined, and transitions between them can be triggered by boolean-valued expressions that are a function of state and bound cell quantities, or by pre- or post-synaptic events. Regime definitions can be nested, and an inner regime definition inherits any triggers from the enclosing scope, and the evolution function from the enclosing scope as well, if it is not overridden. The initial regime can be specified in the `initial` definition. The default regime has no name, and so cannot be a target of `regime` clauses in a `when` definition.
 
-The evolution function is defined with the `evolution` definition, and there may only be one `evolution` per regime. The expression on the rhs must have type equal to the 'derivative' type of the state. The derivative of a quantity is that quantity divided by time; the derivative of a record type is the record type where each field _x_ is replaced by a field _x'_ with type the derivative type of _x_. See the discusion under record types below for more details.
+The evolution function is defined with the `evolve` definition, and there may only be one `evolve` per regime. The expression on the rhs must have type equal to the 'derivative' type of the state. The derivative of a quantity is that quantity divided by time; the derivative of a record type is the record type where each field _x_ is replaced by a field _x'_ with type the derivative type of _x_. See the discusion under record types below for more details.
 
 Effects tie the state to the cell, defining how the state determines ionic currents or species flows, or how it governs species concentrations.
 
-Parameter definitions are unique to the interface — they are not visible from other interfaces — and can be defined with a default value in the interface definition, or can expose a parameter defined in an imported module.
+Exports make parameters visible and settable by models that employ the interface. As a convenience, an export and a parameter definition can be combined in a single export declaration.
 
-If the interface doesn't require any evolving state, it can omit the `initial` and `evolution` definitions.
+If the interface doesn't require any evolving state, it can omit the `initial` and `evolve` definitions.
 
 #### Density models
 
@@ -216,9 +218,7 @@ Events: any.
 
 #### Concentration models
 
-Concentration models determine the internal and/or external concentration of a species over time.
-As specified, only one concentration model can be used to determine the state of a species in any
-given region of a cell. The initial value of the state determines the initial value(s) of the concentration.
+Concentration models determine the internal and/or external concentration of a species over time. As specified, only one concentration model can be used to determine the state of a species in any given region of a cell. The initial value of the state determines the initial value(s) of the concentration.
 
 Bindable states: state; membrane potential; temperature; current density "_species_"; molar flux "_species_"; charge "_species_". Note that the concentrations themselves are _not_ bindable.
 
@@ -237,28 +237,28 @@ A cleaner approach would be to present a concentration model in terms of the cha
 Example, concentration model:
 ```
 interface concentration "CaDynamics" {
-    parameter real gamma = 0.5;
-    parameter time decay = 80 ms;
-    parameter length detph = 0.1 µm;
-    parameter concentration steady_conc = 1.0e-4 mmol/L;
+    export parameter real gamma = 0.5;
+    export parameter time decay = 80 ms;
+    export parameter length detph = 0.1 µm;
+    export parameter concentration steady_conc = 1.0e-4 mmol/L;
 
     initial state = steady_conc;
 
     bind ca_conc = state;
     bind ca_flux = molar flux "ca";
-    evolution = -ca_flux*gamma/depth - (ca_conc-steady_conc)/decay;
+    evolve state' = -ca_flux*gamma/depth - (ca_conc-steady_conc)/decay;
 
     effect internal concentration "ca" = ca_conc;
 }
-```    
+```
 
 Alternative concentration rate model:
 ```
 interface concentration "CaDynamics" {
-    parameter real gamma = 0.5;
-    parameter time decay = 80 ms;
-    parameter length detph = 0.1 µm;
-    parameter concentration steady_conc = 1.0e-4 mmol/L;
+    export parameter real gamma = 0.5;
+    export parameter time decay = 80 ms;
+    export parameter length detph = 0.1 µm;
+    export parameter concentration steady_conc = 1.0e-4 mmol/L;
 
     bind ca_flux = molar flux "ca";
     bind ca_conc = internal concentration "ca";
@@ -270,16 +270,16 @@ interface concentration "CaDynamics" {
 The alternative model could have been split into two different models, to be applied over the same regions:
 ```
 interface concentration "CaUnbuffered" {
-    parameter real gamma = 0.5;
-    parameter length depth = 0.1 µm;
+    export parameter real gamma = 0.5;
+    export parameter length depth = 0.1 µm;
 
     bind ca_flux = molar flux "ca";
     effect internal concentration rate "ca" = -ca_flux*gamma/depth;
 }
 
 interface concentration "CaBuffered" {
-    parameter concentration steady_conc = 1.0e-4 mmol/L;
-    parameter time decay = 80 ms;
+    export parameter concentration steady_conc = 1.0e-4 mmol/L;
+    export parameter time decay = 80 ms;
 
     bind ca_conc = internal concentration "ca";
     effect internal concentration rate "ca" = -(ca_conc-steady_conc)/decay;
@@ -293,15 +293,18 @@ interface concentration "CaBuffered" {
 ## Types and type expressions
 
 Every expression has a type, which is either:
+
 1. A boolean value.
 2. A quantity (see below).
 3. A record type, comprising an unordered sequence of named fields, with each field being either a quantity or another record type.
 
 Type descriptions are explicitly required in:
+
 1. Record field type declarations.
 2. Function parameter declarations.
 
 Type descriptions are optional in contexts where the type can be deduced:
+
 1. In `bind` and `parameter` declarations.
 2. In `let` and `with` expressions.
 3. In function return value type declarations.
@@ -429,7 +432,10 @@ A record type is a _subrecord_ of another type for every field _F_ in the first 
 
 ## Expressions
 
-**TODO:** Expand: an expression can be a comparison expression, an arithmetic expression, a record expression, a function expression, ...
+An expression corresponds to something that can be evaluated to give a value. They can be a literal value, or some
+combination of literal values, bound identifiers, arithemetic and record operations, function invocations, local bindings, and comparisons.
+
+> &lt;expression&gt; = &lt;value-literal&gt; | `(` &lt;expression;&gt; `)` | &lt;function-call&gt; | &lt;arithemtic-expr&gt; | &lt;record-expr&gt; | &lt;boolean-expr&gt; | &lt;conditional-expr&gt; | &lt;let-expr&gt; | &lt;with-expr&gt;
 
 ### Literal values
 
@@ -478,9 +484,38 @@ or with maximum clarity, by
 
 The type of a literal value is the quantity that is dimensionaly compatible with the given unit.
 
-### Comparison expressions
+### Boolean expressions and conditionals
 
-**TODO**: Things that evaulate to `boolean`.
+Boolean expressions are those expressions that evalue to a boolean value. They comprise the boolean literals `true` and `false`, and comparisons.
+
+> &lt;boolean-expr&gt; ::= `true` | `false` | &lt;expression&gt; &lt;comparison-op&gt; &lt;expression&gt; | &lt;expression&gt; &lt;logical-op&gt; &lt;expression&gt;
+>
+> &lt;comparison-op&gt; ::= `<` | `<=` | `>` | `>=` | `==` | `!=`
+>
+> &lt;logical-op&gt; ::= `not` | `and` | `or`
+
+Conditional expressions evaluate to one of two sub-expressions based on a boolean value.
+
+> &lt;conditional-expr&gt; ::= `if` &lt;expression&gt; `;` `then` &lt;expression&gt; `else` &lt;expression&gt;
+
+#### Alternative conditional syntax
+
+In order to avoid nested `if` expressions, we could also or instead adopt a guard-style syntax. The last clause must have condition `true`, or as syntactic sugar, `otherwise`.
+
+**TODO:** Syntax definition.
+
+Example:
+```
+let q =
+  | a==3 => 1
+  | otherwise => sin(a)/a;
+```
+
+#### Semantics
+
+Comparisons can only be performed between quality values of the same type, or between records that are of the same type, or where one is a subrecord of the other. For record comparisons, the expression evaluates to true if the comparison holds true for each field in the subrecord.
+
+Logical operations are only defined for boolean values.
 
 ### Arithmetic expressions
 
@@ -508,38 +543,130 @@ As an example, the following expression has the type `record { voltage a; real b
 ```
 where the type of the field `a` is deduced from the rhs of the binding.
 
-Record values support two operations: field access, and substitution.
+Record values support two operations: field access, and update.
 
-> &lt;record-expr&gt; ::= &lt;record-value&gt; | `(` &lt;record-expr&gt; `)` | &lt;record-expr&gt; `.` &lt;identifier&gt; | &lt;record-expr&gt; `|` &lt;record-expr&gt;
+> &lt;record-expr&gt; ::= &lt;field-expr&gt; | &lt;update-expr&gt;
+>
+> &lt;field-expr&gt; ::= &lt;expression&gt; `.` &lt;identifier&gt;
+>
+> &lt;update-expr&gt; ::= &lt;expression&gt; `:` &lt;expression&gt;
 
-The update operation `|` takes two record values, with the rhs a subrecord of the lhs,
-and returns a record of the same type as the lhs. Each field has the value taken from the rhs
-if present in the subrecord type, or otherwise the value taken from the lhs.
+The update operation `:` takes two record values, with the rhs a subrecord of the lhs, and returns a record of the same type as the lhs. Each field has the value taken from the rhs if present in the subrecord type, or otherwise the value taken from the lhs.
 
 In the following example,
 ```
 let p = { a = 3.0; b = 10 A; };
-let q = p | { b = 20 A; };
+let q = p : { b = 20 A; };
 ```
 the identifier `q` is bound to the record value `{ a = 3.0; b = 20 A; }`.
 
-### Binding expressions
+### Local binding expressions
 
-**TODO:** Refactor following for syntax, etc.
+`let` and `with` bind identifiers to expressions or record fields. `with` could also possibly be used to bring into scope identifiers defined in an imported module.
 
-Let expressions are of the forms:
-```
-    let _optional type_ _identider_ = _expression1_ _expression2_;
-```
-or
-```
-    with _optional type_ _record-valued expression_ _expression2_;
-```
-The types are optional if they can be deduced from the provided value.
-The `with` expression binds an identifier for each field of the record
-to the corresponding field value.
+> &lt;let-expr&gt; ::= `let` [&lt;type-expr&gt;] &lt;identifier&gt; = &lt;expression&gt; `;` &lt;expression&gt;
+> &lt;with-expr&gt; ::= `with` [&lt;type-expr&gt;] &lt;expression&gt; `;` &lt;expression&gt;
 
-The identifiers bound by a `let` or `with` expression have scope
-only in `_expression2_`.
+The identifiers introduced by `let` or `with` have only the terminal expression as scope.
 
-TODO: Tidy up/make syntax definition.
+**TODO:** Examples!
+
+## Syntax discussion and alternatives
+
+### Semicolons
+
+The proposal above requires semicolons only in three circumstances: when associating or binding something after an equals sign; when making local bindings in a with-expression; after a conditional in a when-clause; or when declaring fields in a record type:
+```
+# Semicolons after `=` and expression:
+parameter length² A = 3 m²;
+bind S = state;
+effect current "na" = 3 mA;
+let real a = S.a; 3+a
+
+# Semicolon after first expression in `with`:
+with S; 3+a
+
+# Semicolon after field definition in record type,
+# as well as in record value fields.
+let record { concentration x; } b = { x = 3; }; 3+b.x
+
+# No semicolon after record type alias.
+record foo { real x; }
+
+# Or after function definition.
+function bar () { 3 }
+
+# Or after a paramater alias,
+density parameter ca2_dynamics.foo as foo
+
+# OR after import, etc.
+import std as foobar
+
+```
+
+Why have semicolons at all? It can disambiguate alternative possible parses when two expressions are adjacent, which is a situation that arises from allowing whitespace to act as a product in quantity and unit expressions:
+```
+let A = 3 A A - 4 A
+```
+could be interpreted as binding `A` to the value 3 square amperes and returning negative four amperes, or binding `A` to the value 3 amperes, and then returning `A` minus four amperes, giving negative one ampere. The semicolon resolves this one way or the other:
+```
+let A = 3 A; A - 4 A
+```
+
+Why not have semicolons more commonly? It's certainly possible: they could be added after every `import` or record alias or function definition, but it is not necessary for the resolution of ambiguities. An alternate function and alias syntax described below could help unify some of these syntaxes.
+
+
+### Function alternatives and type aliases
+
+As presented above, functions are fairly inflexible: they can only be defined in module/interface scope, and they are not permitted to be polymorphic.
+
+Functions could be allowed to be defined locally with a syntax like e.g.
+```
+function five() {
+    let f = function (real a, real b) { a+b };
+    f(3, 2)
+}
+```
+in which case a uniform definition syntax might replace `function _name_ (params...) ...`, e.g.
+```
+def five = function () {
+    let f = function (real a, real b) { a+b };
+    f(3, 2)
+};
+```
+And rather than be so verbose, we could use something like `fn` instead.
+
+A problem with this is that it makes functions look like values, and values should be things you can return from functions, etc., and suddenly for consistency it looks like we might want to support functions as first class objects. This would increase expressiveness, but would also make the type system more complicated. For the domain, this is probably not an expressiveness we need.
+
+However, we could make a distinction between binding local identifiers with `let` and introducing new function or record aliases with e.g. `def`. Then the example would become
+```
+def five = fn () {
+    def f = fn (real a, real b) { a+b };   # 'f' is _not_ a value!
+    f(3, 2)
+};
+```
+and this would allow a general approach to function aliases, type naming, and derivative type forms:
+```
+def model_state = record { real a; concentration b; }; # record alias
+
+def ca_model = concentration; # quantity alias
+def ca_rate = fn (ca_model conc) -> ca_model' { conc/20 ms }; # ca_model' automatically defined as concentration/time
+
+import std
+def nernst = std.nernst; # 'nernst' is another name for the 'std.nernst' function.
+```
+
+If `def foo = fn (...) { ... };` looks a little verbose, we could keep `def foo(...) { ... }` as syntactic sugar.
+
+### Magic keywords and extension points
+
+Within an interface block, there are specific points within the permitted syntax where keywords are used to refer to interface-specific values or concepts, and which constitute natural places for future extensions of the interface block to support new functionality:
+
+1. Right hand side of `bind`, corresponding to interface-specific exposed values, such as the mechanism state, ion concentrations, membrane voltage, etc.
+2. Right hand side of local binding in a `when` clause, tying event or post-event data to an identifier.
+3. Left hand side of `effect`, corresponding to contributions of the interface to the simulation state.
+4. Left hand side of `initial`, where the optional `... from` clause modifies the initial state, and also where `state` forms the left hand side of the final binding.
+5. Left hand side of `evolve`, where the keyword `explicit` might be replaced with other possible descriptions, such as `implicit` for implicit ODE or DAE systems, and also where `state'` forms left hand side of the final binding.
+6. Left hand side of `export`, where we have `density parameter` or `parameter`, but which could be extended to support for example the exposure of derived values to probe requests or similar.
+
+**TODO:** Add examples of possible syntax extensions in these cases.
