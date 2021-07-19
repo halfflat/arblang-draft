@@ -147,11 +147,13 @@ Types, records and expressions are described below.
 >
 > &lt;regime-defn&gt; ::= `regime` &lt;identifier&gt; `{` [ &lt;regime-internal-defn&gt; | &lt;regime-defn&gt; ] `}`
 >
-> &lt;regime-internal-defn&gt; ::= `evolve` [`explicit`] [&lt;type-expr&gt;] `state'` `=` &lt;expression&gt; `;` | &lt;when-defn&gt; `;` | &lt;effect-defn&gt; `;`
+> &lt;regime-internal-defn&gt; ::= `evolve-defn` | &lt;when-defn&gt; | &lt;effect-defn&gt;
+>
+> &lt;evolve-defn&gt; ::= `evolve` [`explicit`] [&lt;type-expr&gt;] `state'` `=` &lt;expression&gt; `;`
 >
 > &lt;when-defn&gt; ::= `when` &lt;when-condition&gt; `;` [ `regime` &lt;qualified-identifier&gt; ] `state` `=` &lt;expression&gt; `;`
 >
-> &lt;when-condition&gt; ::= &lt;expression&gt; | [&lt;type-expr&gt;] &lt;identifier&gt = ( `event` | `post` ) 
+> &lt;when-condition&gt; ::= &lt;expression&gt; | [&lt;type-expr&gt;] &lt;identifier&gt; = ( `event` | `post` )
 >
 > &lt;effect-defn&gt; ::= &lt;effect&gt; = &lt;expression&gt; `;`
 
