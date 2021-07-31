@@ -2,9 +2,14 @@
 
 Arblang is a language for defining the dynamics and effects of Arbor 'mechanisms'. A mechanism is a stateful process whose evolution over time is governed by a system of ODEs and by responses to external events, and which in turn acts upon the cellular state to which the mechanism is applied.
 
+The arblang language is constrained so that every evolution and effect can be interpreted _symbolically_ as closed form expressions. This is to permit the automatic analysis of these expressions for the purposes of determining a priori analytic solutions or appropriate ODE approximation techniques, and to automatically determine, for example, time derivatives of effect values through symbolic or automatic differentiation. Consequently common programming constructs such as unbounded iteration or recursion are precluded.
+
+Arblang nonetheless can also be interpreted in a purely numerical fashion in other contexts.
+
+
 ## Mechanism semantics
 
-A mechanism can be one of a number of different _classes_ of mechanism, where each class determines the sort of cell interactions that the mechanism performs. The classes are pre-defined, but are open ended, in the sense that further extensions to Arbor may admit new mechanism classes. The basic set of classes are described as follows.
+A mechanism can be one of a number of different _classes_ of mechanism, where each class determines the sort of cell interactions that the mechanism performs. The classes are pre-defined, but are open ended, in that further extensions to Arbor may admit new mechanism classes. The basic set of classes are described as follows:
 
 * _Density mechanisms_ describe processes with spatial extent, and their effects are described in terms of current densities and molar fluxes of ionic and nonionic species. They do not receive events.
 
@@ -14,7 +19,8 @@ A mechanism can be one of a number of different _classes_ of mechanism, where ea
 
 Each of these mechanisms can have a _state_ comprising zero or more named values that vary over time. Each mechanism definition will provide the initial values for this state, and define their evolution by an explicit system of ODEs.
 
-### Bindings
+
+### External bindings
 
 The definition of a mechanism allows for names to be bound to the mechanism state and various cellular quantities so that they can play a role in defining the evolution and effects of the mechanism.
 
@@ -35,6 +41,7 @@ The list of possible cellular quantities is open to future extension, but initia
 * _Internal concentration_ and _external concentration_ are the intracellular and extracellular concentrations respectively of a species, in the vicintiy of the cellular membrane.
 
 Not every mechanism class has access to every cellular quantity. In particular, only concentration models have access to current densities and molar fluxes.
+
 
 ### Effects
 
@@ -58,6 +65,7 @@ Restrictions:
 * Point mechanisms can only have current or molar flow rate effects.
 * Density mechanisms can only have current density or molar flux effects.
 
+
 ### Events
 
 As noted above, point mechanisms can receive _events_, upon which their state can be modified according to some formula. There are currently two supported sorts of events:
@@ -65,6 +73,7 @@ As noted above, point mechanisms can receive _events_, upon which their state ca
 * _Event_ is triggered when by a spike on an attached connection. It has a scalar value equal to the connect weight.
 
 * _Post_ is triggered when a spike is generated on the post-synaptic cell. There may be a delay between the spike generation and the _post_ event; the value of the _post_ event is the time between the spike generation and the event delivery.
+
 
 ### Parameters
 
@@ -78,7 +87,8 @@ For a parameter to be settable, it must be explicitly exported in the mechanism 
 Tokenization is governed by a grammar, described below in a variant of BNF, with the notation:
 
 * Names for non-terminals are written in _italics_ and may not contain spaces.
-* Terminals are written in `highlighted nonproportional`, denoting the exact character sequence thus represented.
+* Non-terminals that constitue tokens are written in ***bold-italics***.
+* Terminals are written in `monospace`, denoting the exact character sequence thus represented.
 * A terminal may also be written as a unicode code point, as 'U+' followed by four or five hexadecimal digits followed optionally by the literal character and then optionally by the unicode name in all capitals.
 * A set of single character terminals can be denoted by {expr} where _expr_ is a one- or two-letter Unicode general category abbreviation, indicating the corresponding collection of characters, or a binary Unicode property, indicating the collection of characters for which the property has the value 'Yes'.
 * A set of single character terminals can also be denoted by a character class […] following the syntax described in [Unicode Regular Expressions](https://www.unicode.org/reports/tr18) sections 0.1.1, 1.2.4, and 1.3.
@@ -88,241 +98,343 @@ Tokenization is governed by a grammar, described below in a variant of BNF, with
 * A plus sign indicates the preceding symbol or group is repeated one or more times.
 * A question mark indicates the preceding symbol or group may be omitted, that is, it can appear at most one time.
 
+
 ### Character set
 
-Arblang source is represented as a sequence of Unicode characters in normalization form C (NFC). It is the responsibility of the interpreting environment to transform any particular source encoding to this representation.
+Arblang source is represented as a sequence of Unicode characters in normalization form C (NFC), excluding unassigned characters, surrogate code points, noncharacters, and byte order marks. It is the responsibility of the interpreting environment to transform any particular source encoding to this representation.
+
 
 ### Tokenization
 
-A lexically valid Arblang source must admit a tokenization as a sequence of _symbol_, _integer-literal, _superscript-integer-literal_, _real-literal_, _whitespace_, _punctuation_, _string-literal_, and _comment_.
+A lexically valid Arblang source must admit a tokenization as a sequence of ***comment*** tokens, ***whitespace*** tokens, ***symbol*** tokens, ***string-literal*** tokens, ***superscript-literal*** tokens, ***numeric-literal*** tokens, and punctuation tokens.
 
-The value of a token is the sequence of characters comprising the token after performing compatibility normalization (Unicode NFKC), possibly followed by a futher canonicalization. Comment tokens and whitespace tokens discared their value.
+A token has an associated value, which may be empty. If not empty, it is the result of applying a token-specific canonicalization process.
+With the exception of string literals, canonicalization first applies Unicode compatibility normalization NFKC to the token text, then further processing as detailed below.
+
 
 #### Comments
 
 A comment is introduced by `#` and then extends to the end of the line. It is the only context in which a line end is not regarded simply as whitespace.
 
-> _comment_ ::= U+0023 `#` NUMBER SIGN _comment-character_* _new-line_
+> ***comment*** ::= U+0023 `#` NUMBER SIGN _comment-character_* _new-line_
+>
 > _comment_character_ ::= [^\\u{000A}\\u{000B}\\u{000C}\\u{000D}\\u{0085}\\u{2028}\\u{2029}]
+>
 > _new-line_ ::= _cr_ | _lf_ | _cr_ _lf_ | _other-newline_
+>
 > _lf_ ::= U+000A LINE FEED
+>
 > _cr_ ::= U+000D CARRIAGE RETURN
+>
 > _other-new-line_ ::= U+0085 NEXT LINE | U+2028 LINE SEPARATOR | U+2029 PARAGRAPH SEPARATOR
+
+##### Token value
+
+A ***comment*** token has no value.
+
+##### Notes
 
 A _comment-character_ is any character that is not the first character of _new-line_. New line characters and sequences correspond to the [line boundaries requirement RL1.6 of Unicode Regular Expressions](https://www.unicode.org/reports/tr18/#RL1.6).
 
-A _comment_ token has no value.
 
 #### Whitespace
 
 In some expressions, where it denotes multiplication, whitepace is mandatory, but otherwise whitespace is not significant. It comprises any non-empty sequence of characters with the White_Space property.
 
-> _whitespace_ ::= {White_Space}\+
+> ***whitespace*** ::= {White_Space}\+
 
-A _whitespace_ token has no value.
+##### Token value
+
+A ***whitespace*** token has no value.
+
 
 #### Symbols
 
 Symbols correspond to Arblang identifiers and keywords. Arblang keywords are generally contextual: the interpretation of a symbol as an identifier or a keyword is determined in parsing.
 
-> _symbol_ ::= _symbol-start_ _symbol-continue_\*
+> ***symbol*** ::= _symbol-start_ _symbol-continue_\*
+>
 > _symbol-start_ ::= {L} | {Nl} | {Other_ID_Start}
+>
 > _symbol-continue_ ::= _symbol-start_ | {Nd} | {Mn} | {Mc} | {Pc} | _prime-mark_
+>
 > _prime-mark_ ::= U+0027 `'` APOSTROPHE | U+02B9 `ʹ` MODIFIER LETTER PRIME | U+2032 `′` PRIME
 
-Identifiers broadly follow the conventions of Python, except:
+##### Token value
 
+Canonicalization substitutes any character in _prime-mark_ with U+0027 APOSTROPHE after performing NFKC normalization.
+
+##### Notes
+
+Identifiers broadly follow the conventions of Python, except:
 * `_` is not a valid _symbol-start_.
-* A _symbol_ may contain _prime-mark_ characters.
+* A ***symbol*** may contain _prime-mark_ characters.
 * Characters that are only _compatibility_ equivalent to an acceptable _symbol_ character are not permitted. In particular, superscript numerals are not permitted within a _symbol_.
 
-The token value is the character sequence after compatability normalization, and after any character in _prime-mark_ is mapped to U+0027 APOSTROPHE.
+
+#### Superscript literals
+
+A superscript literal is used to denote exponents in the absence of the exponentiation operator.
+
+> ***superscript-literal*** ::= _superscript-minus_? _superscript-digit_+
+>
+> _superscript-minus_ ::= U+207B `⁻` SUPERSCRIPT MINUS
+>
+> _superscript-digit_ ::= `⁰` | `¹` | `²` | `³` | `⁴` | `⁵` | `⁶` | `⁷` | `⁸` | `⁹`
+
+##### Token value
+
+After NFKC normalization, which takes superscript digits and minus to regular digits and U+2212 MINUS SIGN, the token value is canonicalized by mapping U+2212 to U+002d `-` HYPHEN-MINUS.
 
 
 #### Numeric literals
 
-Arblang distinguishes between three different sorts of numeric literal: _real-literal_, _integer-literal_, and _superscript-integer-literal_. Real and integer literals follow C++ conventions.
+Numeric literals represent both fractional and integer literal values.
 
-> _real-literal_ ::=
->     _digit-sequence_ _decimal-separator_ _digit-sequence_? _exponent_? |
->     _decimal-separator_ _digit-sequence_ _exponent_?
+> ***numeric-literal*** ::= _digit-sequence_ (_decimal-separator_ _digit-sequence_)? _exponent_?
+>
 > _digit-sequence_ ::= ( `0` | `1` | `2` | `3` | `4` | `5` | `6` | `7` | `8` | `9` )+ ( _digit-group-separator_ _digit_sequence_)?
-> _digit-group-separator_ ::= U+0027 `'` APOSTROPHE
-> _decimal-separator_ ::= U+002E `.` FULL STOP
-> _exponent_ ::= ( 'E' | 'e' ) _sign_? _digit-sequence_
+>
+> _digit-group-separator_ ::= U+0027 `'` APOSTROPHE | _whitespace_
+>
+> _decimal-separator_ ::= U+002E `.` FULL STOP | _whitespace_
+>
+> _exponent_ ::= _whitespace_? _exponent-E_ | _exponent-alternate_
+>
+> _exponent-E_ ::= ( 'E' | 'e' ) _sign_? _digit-sequence_
+>
+> _exponent-alternate_ ::= U+00D7 `×` MULTIPLICATION SIGN _whitespace_? `10` _superscript-literal_
+>
 > _sign_ ::= U+002B `+` PLUS SIGN | U+002D `-` HYPHEN-MINUS | U+2212 `−`MINUS SIGN
->
-> _integer-literal_ ::= _digit-sequence_
->
-> _superscript-integer-literal_ ::= _superscript-minus_? _superscript-digit_+
-> _superscript-minus_ ::= U+207B `⁻` SUPERSCRIPT MINUS
-> _superscript-digit_ ::= `⁰` | `¹` | `²` | `³` | `⁴` | `⁵` | `⁶` | `⁷` | `⁸` | `⁹`
 
-The value of a numeric literal token is the character sequence after NFKC normalization (which takes superscript digits and minus to regular digits and U+2212 MINUS SIGN), followed by the canonicalization:
+##### Token value
 
+After normalization, which takes superscript digits and minus to regular digits and U+2212 MINUS SIGN, the token value is canonicalized as follows.
+* Any _digit-group-separator_ is removed (including all whitespace).
 * U+2212 MINUS SIGN is mapped to U+002D `-` HYPHEN-MINUS.
-* Any _digit-group-separator_ is removed.
+* U+002B PLUS SIGN is removed.
+* Exponential markers `e` and `×10` are replaced with `E`.
+
+##### Notes
+
+* The use of whitespace as a digit group separator is intended to accommodate SI practice of writing long numbers, e.g. `10 000 000` for 10⁶.
+* The alternate scientific number syntax `1.234 45 × 10³` is allowed in order to support standard SI practice. `×` is not used elsewhere as an arithmetic operator.
+* The apostrophe digit separator is also used in C++14 for integer literals.
+* In order to accommodate loss-free rescaling of unit-bearing quantities, real and integer literals in arithmetic contexts should have an internal representation that maintains a normalized signifcand and a power of ten scale.
+
+
+#### String literals
+
+String literals encode arbitrary character sequences used to specify and identify interface and species names.
+
+> ***string-literal*** ::= `"` ( [^&#92;"]* | _escape-sequence_ )\* `"`
+>
+> _escape-sequence_ ::= `\\` | `\"`
+
+##### Token value
+
+The value is taken as the characters between the initial and final `"` characters, followed by the replacement of each _escape-sequence_: `\\` by `\` and `\"` by `"`.
+
+##### Notes
+
+The value of a ***string-literal*** token does _not_ undergo NFKC normalization, and so comprises an arbitrary sequence of Unicode characters in NFC normalization. While the syntax allows arbitary white space within a literal, including line separators and similar, the interpreting environment might impose further restrictions on what constitutes a valid interface name, for example.
+
 
 #### Punctuation
 
 > _punctuation_ ::=
->     `+` | _minus-sign_ | _multiplication-dot_ | _division-slash_ | `^` | `(` | `)` |
->     `==` | _not-equal_ | `<` | _less-or-equal_ | `>` | _greater-or-equal_ |
->     _left-arrow_ | _right-arrow_ | _right-left-arrow_ |
->     `=` | `;` | `{` | `}` | `:` | `|` | `,`
->
-> _minus-sign_ ::= U+002D `-` HYPHEN-MINUS | U+2212 `−`MINUS SIGN
-> _multiplication-dot_ ::= U+00B7 `·` MIDDLE DOT | U+22C5 `⋅` DOT OPERATOR
-> _division-slash_ ::= ~ U+002F `/` SOLIDUS | U+2215 `∕` DIVISION SLASH
-> _not-equal_ ::= `!=` | U+2260 `≠` NOT EQUAL TO
-> _less-or-equal_ ::= `<=` | U+2264 `≤` LESS-THAN OR EQUAL TO
-> _greater-or-equal_ ::= `>=` | U+2265 `≥` GREATER-THAN OR EQUAL TO
-> _left-arrow_ ::= `<-` | U+2190 `←` LEFTWARDS ARROW
-> _right-arrow_ ::= `->` | U+2192 `→` RIGHTWARDS ARROW
-> _right-left-arrow_ ::= `<->` | U+21C4 `⇄` RIGHT ARROW OVER LEFT ARROW
+>     ***plus-sign*** | ***minus-sign*** | ***multiplication-dot*** | ***division-slash*** | ***exponent-op*** |
+>     ***compare-equal*** | ***compare-not-equal*** | ***compare-less*** | ***compare-less-eqaul*** | ***compare-greater*** | ***compare-greater-eqaul*** |
+>     ***left-arrow*** | ***right-arrow*** | ***right-left-arrow*** |
+>     ***assign-equal*** | ***semicolon*** | ***left-paren*** | ***right-paren*** | ***left-brace*** | ***right-brace*** |
+>     ***colon*** | ***bar*** | ***comma*** | ***period***
 
-Canonicalization:
+Punctuation token definitions:
 
-* _multiplication-dot_ is repesented as U+22C5 `⋅` DOT OPERATOR.
-* Other punctuation that has a representation as a sequence of ASCII characters is represented by that sequence.
+> ***plus-sign*** ::= `+`
 
-Note that a punctuation character occuring within a numeric literal is not regarded as a separate token.
+> ***minus-sign*** ::= U+002D `-` HYPHEN-MINUS | U+2212 `−`MINUS SIGN
+
+> ***multiplication-dot*** ::= U+00B7 `·` MIDDLE DOT | U+22C5 `⋅` DOT OPERATOR
+
+> ***division-slash*** ::= ~ U+002F `/` SOLIDUS | U+2215 `∕` DIVISION SLASH
+
+> ***exponent-op*** ::= `^`
+
+> ***compare-equal*** ::= `==`
+
+> ***compare-not-equal*** ::= `!=` | U+2260 `≠` NOT EQUAL TO
+
+> ***compare-less*** ::= `<`
+
+> ***compare-less-eqaul*** ::= `<=` | U+2264 `≤` LESS-THAN OR EQUAL TO
+
+> ***compare-greater*** ::= `>`
+
+> ***compare-greater-eqaul*** ::= `>=` | U+2265 `≥` GREATER-THAN OR EQUAL TO
+
+> ***left-arrow*** ::= `<-` | U+2190 `←` LEFTWARDS ARROW
+
+> ***right-arrow*** ::= `->` | U+2192 `→` RIGHTWARDS ARROW
+
+> ***right-left-arrow*** ::= `<->` | U+21C4 `⇄` RIGHT ARROW OVER LEFT ARROW
+
+> ***assign-equal*** ::= `=`
+
+> ***semicolon*** ::= `;`
+
+> ***left-paren*** ::= `(`
+
+> ***right-paren*** ::= `)`
+
+> ***left-brace*** ::= `{`
+
+> ***right-brace*** ::= `}`
+
+> ***colon*** ::= `:`
+
+> ***bar*** ::= U+007C `|` VERTICAL LINE
+
+> ***comma*** ::= `,`
+
+> ***period*** ::= `.`
+
+##### Token value
+
+Punctuation tokens have no value.
 
 
+## Arblang syntax and semantics
 
-# REFACTOR FROM HERE
+The syntax definitions below are defined in terms of the tokens defined in the lexical grammar, with the following conventions:
+
+* A ***symbol*** token can represent an identifier or a keyword; keywords in the syntax descriptions are written in `monospace`, and should be interpreted as ***symbol*** tokens with the corresponding value.
+* Where ***whitespace*** is present in a syntax rule, it is required, but additional ***whitespace*** tokens are permitted anywhere in the (tokenized) arblang source, where they are ignored.
+* For readability in syntax rules, the text representation of a punctuation token, styled monospace, may stand in for the punctuation token itself. So, for example, `=` might stand for the token ***assign-equal***.
+
+An arblang source document comprises a series of module and interface definitions.
+
+> _source_ ::= ( _module-defn_ | _interface-defn_ )+
+
+Module and interface definitions are described below.
+
+### Identifiers and scope
+
+Identifiers are represented by ***symbol*** tokens, and refer to a module, an imported module, a regime, a constant, a parameter, a function argument, an external binding, a record field, a type alias, a function, or a local value binding.
+
+Identifiers have a _scope_. With one exception for regime names, an identifer's scope does not precede the point where that identifier is introduced by some declaration or binding. The scopes are as follows:
+
+**Global scope.**
+A module definition introduces the module name into the following global scope. The environment may also introduce module names defined in other arblang sources.
+
+**Module scope.**
+Parameter, constant, type alias, and function definitions have module scope, as do module imports and external bindings. The scope extends from after the definition or import, until the end of the enclosing module or interface definition.
+
+**Function scope.**
+Function arguments have function scope, which extends until the end of the function definition.
+
+**Regime scope.**
+All top-level regime definitions in an interface have scope of the entire interface definition, even before the regime definition. The same applies within a region definition: the scope of an internal region identifier is the entire body of the region definition.
+
+**Expression scope.**
+`let` and `with` binding expressions introduce new identifiers that have as scope the final expression in the binding. Similarly function identifiers and type aliases introduced with `def` have as scope the final sub-expression in the `def` expression.
+
+Scopes are naturally nested, and identifiers bound in an outer scope which are rebound in an inner scope will have the inner binding in the inner scope, and the outer binding in the outer scope.
+
+A _qualified-identifier_ identifies a definition in an imported module, or a sub-regime within a regime.
+
+> _qualified-identifier_ ::= ***symbol*** ( `.` ***symbol*** )\*
 
 
-A mechanism is defined by an interface specification that depends on the sort of mechanism (e.g. point process, density process, concentration model). In the interface block, keywords introduce: bindings of names to cellular state or mechanism state; specification of user-visible parameters; specfication of state evolution.
-
-The expressions that are given in an interface block can be complete in and of themselves, with optional typing (if no types, then types are deduced). But they can also reference function definitions, constants and parameters in one or more named _modules_.
-
-## Encoding
-
-Arblang source is represented in the Unicode character set. After translation from any native encoding, before parsing the source is transformed into Unicode Normalization Form C.
-
-The character representation of tokens is not unique: character sequences that are the same under Unicode NFC normalization are treated as equivalent, and some tokens in addition admit additional representations. In particular:
-
-&lt;multiplication-dot&gt;
-  ~ U+00B7 `·` MIDDLE DOT or U+22C5 `⋅` DOT OPERATOR.
-
-&lt;minus-sign&gt;
-  ~ U+002D `-` HYPHEN-MINUS or U+2212 `−` MINUS SIGN.
-
-&lt;division-slash&gt;
-  ~ U+002F `/` SOLIDUS or U+2215 `∕` DIVISION SLASH.
-
-&lt;micro-prefix&gt;
-  ~ U+03BC `μ` GREEK LETTER SMALL MU or U+00B5 `µ` MICRO SIGN or
-    U+0075 `u` LATIN SMALL LETTER U
-
-&lt;ohm-symbol&gt;
-  ~ U+03A9 `Ω` GREEK LETTER CAPITAL OMEGA or U+2126 `Ω` OHM SIGN.
-
-&lt;reaction-right&gt;, &lt;result-arrow&gt;
-  ~ U+2192 `→` RIGHTWARDS ARROW or the sequence `->`.
-
-&lt;reaction-left&gt;
-  ~ U+2190 `←` LEFTWARDS ARROW or the sequence `<-`.
-
-&lt;reaction-rightleft&gt;
-  ~ U+21C4 `⇄` RIGHT ARROW OVER LEFT ARROW or the sequence `<->`.
-
-Allowing multiple symbols in these instances allows flexibility in input environments and easier copy/paste from mathematical software. A goal is to allow mathematical and quantity expressions to be represented similarly to how they might be typeset.
-
-## Whitespace
-
-Outside of string literals (see below), all non-empty sequences of whitespace are treated equivalently.
-
-> &lt;whitespace&gt; ::= &lt;whitespace-char&gt;+
->
-> &lt;whitespace-char&gt; ::= any character with the Unicode property `White_Space`.
-
-## Identifiers
-
-An identifier is a label used to denote a module, an imported module, a constant, a parameter, a function argument, an external binding, a record field, a type alias, a function, or a local value binding.
-
-Identifiers have a _scope_. Generally, no matter the sort of scope, an identifer's scope does not precede the point where that identifier is introduced by some declaration or binding. The scopes are as follows:
-
-Global scope
-  ~ A module definition introduces the module name into the following global scope. The environment may also introduce module names defined in other arblang sources.
-
-Module scope
-  ~ Parameter, constant, type aliases, and function definitions have module scope, as do module imports and external bindings. The scope extends from after the definition or import, until the end of the enclosing module or interface definition.
-
-Function scope
-  ~ Function arguments have function scope, which extends until the end of the function definition.
-
-Regime scope
-  ~ All top-level regime definitions in an interface have scope of the entire interface definition, even before the regime definition. The same applies within a region definition: the scope of an internal region identifier is the entire body of the region definition.
-
-Expression scope
-  ~ `let` and `with` binding expressions introduce new identifiers that have as scope the final expression in the binding. Similarly function identifiers and type aliases introduced with `def` have as scope the final sub-expression in the `def` expression.
-
-Valid identifier names are of the form:
-
-> &lt;identifier&gt; ::= &lt;initial-id-symbol&gt; [&lt;id-symbol&gt;]*
->
-> &lt;id-symbol&gt; ::= &lt;initial-id-symbol&gt; | &lt;other-id-symbol&gt;
-
-Identifiers broadly follow the conventions of Python, where below, braces are used to denote Unicode character classes or properties.
-
-> &lt;initial-id-symbol&gt; ::= {L} | {Nl} | {Other_ID_Start}
->
-> &lt;other-id-symbol&gt; ::= {Nd} | {Mn} | {Mc} | {Pc} | &lt;prime-mark&gt;
->
-> &lt;prime-mark&gt; ::= `'` | `ʹ` U+02B9 MODIFIER LETTER PRIME | `′` U+2032 PRIME
-
-&lt;initial-id-symbol&gt; can be any character in the Letter 'L' category, in Number-letter 'Nl' category, or any character with the 'Other_ID_Start' property, which corresponds to the permitted Python starting characters with the exception of the underscore.
-
-&lt;other-id-symbol&gt; includes digits, underscores and similar punctuation, but also &lt;prime-mark&gt;, which is used to denote a derivative.
-
-Unlike Python, characters that are only _compatibility_ equivalent to acceptable identifier symbols are not permitted. In particular, superscript numerals are not permitted within an identifier.
-
-Two identifiers are equivalent if they have the same canonical representation, which corresponds to the Unicode NFKC normalization with the additional mapping of any character in &lt;prime-mark&gt; to `'`.
-
-### Qualified identifier
-
-A qualified identifier is a particular sort of expression that identifies a definition in an imported module, or a sub-regime within a regime.
-
-> &lt;qualified-identifier&gt; ::= &lt;identifier&gt; | &lt;qualified-identifier&gt; `.` &lt;identifier&gt;
-
-## Names
-
-Some objects can take arbitrary labels rather than identifiers, namely chemical species and interface names. These are represented by string literals:
-
-> &lt;string-literal&gt; ::= `"` [ `\"` | `\\` | &lt;unescaped-char&gt; ]* `"`
->
-> &lt;unescaped-char&gt; ::= any character other than `"` or `\`
-
-Whitespace within a string literal is significant, and a string literal can span multiple lines, though using such as names seems like a terrible idea.
-
-## Keywords
-
-Keywords are used to introduce various definitions and declarations both at top level and within modules, interfaces, and functions. Keywords are syntactically identifiers and must be separated from a subsequent &lt;id-symbol&gt; by &lt;whitespace&gt;. In the syntax descriptions below, keywords are written as literals in a minor abuse of notation.
-
-Keywords are reserved identifiers only where necessary to disambiguate the syntax; a record type alias, for example, can also be called `state` even though `state` is a keyword.
-
-## Modules and interfaces
+### Modules and interfaces
 
 Modules are used to collect parameters, constants, and function definitions; interfaces are used to define a particular sort of Arbor functionality, such as ion channel or gap junction dynamics. Module and interface definitions can only be provided at top level.
 
-Syntax:
+#### Module definition
 
-> &lt;module-defn&gt; ::= `module` &lt;identifier&gt; `{` [&lt;parameter-defn&gt; | &lt;constant-defn&gt; | &lt;record-type-alias&gt; | &lt;function-defn&gt; | &lt;module-import&gt; ]* `}`
+> _module-defn_ ::= `module` ***symbol*** `{` ( _parameter-defn_ | _constant-defn_ | _type-defn_ | _function-defn_ | _module-import_ )\* `}`
 >
-> &lt;parameter-defn&gt; ::= `parameter` [&lt;type-expr&gt;] &lt;identifier&gt; `=` &lt;expression&gt; `;`
+> _parameter-defn_ ::= `parameter` _type-expr_? ***symbol*** `=` _expression_ `;`
 >
-> &lt;constant-defn&gt; ::= `constant` [&lt;type-expr&gt;] &lt;identifier&gt; `=` &lt;expression&gt; `;`
+> _constant-defn_ ::= `constant` _type-expr_? ***symbol*** `=` _expression_ `;`
 >
-> &lt;
-> &lt;record-alias-defn&gt; ::= `record` &lt;identifier&gt; &lt;record-type-body&gt;
+> _type-defn_ ::= `type` ***symbol*** `=` _type-expr_ `;`
 >
-> &lt;function-defn&gt; ::= `function` &lt;identifier&gt; `(` [ &lt;fn-arg&gt; [`,` &lt;fn-arg&gt;]*  `)` [ &lt;result-arrow&gt; &lt;type-expr&gt; ] `{` &lt;expression&gt; `}`
+> _function-defn_ ::= `function` ***symbol*** _argument-list_ `=` _expression_ `;`
 >
-> &lt;fn-arg&gt; ::= &lt;type-expr&gt; &lt;identifier&gt;
+> _argument-list_ ::= `(` ( _type-expr_ ***symbol*** ( `,` _type-expr_ ***symbol*** )* )? `)`
 >
-> &lt;module-import&gt; ::= `import` &lt;identifier&gt; [ `as` &lt;identifier&gt; ]
+> _module-import_ ::= `import` ***symbol*** ( `as` ***symbol*** )
+
+
+#### Interface definition syntax
+
+**TODO**
+
+##### Module imports
+
+Identifiers bound in module scope in one module can be used in another module or interface, if the module is imported. If a module `A` is imported as `B`, a type, parameter, constant, or function _x_ defined in `A` can be referenced with the qualified identifier `B`._x_.
+
+Examples:
+```
+module A {
+    constant real pi = 3;
+}
+
+module X {
+    import module A;
+    constant real pi = A.pi; # Also 3.
+}
+
+module Y {
+    import module A as B;
+    constant real pi = B.pi; # Also 3.
+}
+```
+
+#### Function definitions
+
+**TODO**
+
+#### Type aliases
+
+**TODO**
+
+
+#### Alternative function and type alias syntax
+
+The forms for function and type alias definitions above are quite different from earlier proposals; these are reprised here if the new proposed forms are rejected:
+
+> _function-defn_ ::= `function` ***symbol*** _argument-list_ ( `->` _type-expr_ )* `{` _expression_ `}`
+
+Type definitions are only for record types:
+
+> _type-defn_ ::= `record` ***symbol*** `{` ( _type-expr_ ***symbol*** `;` )\* `}`
+
+#### Parameter semantics
+
+A parameter definition introduces a new identifer in module scope, together with a default value. Parameters can be used in any following expression within the module.
+The expression to which a parameter is bound may not include identifiers that are bound in an interface to external quantities, but may include other parameters.
+
+Parameters that are exported in an interface can be bound to a user supplied value externally; they are nonetheless constant. In any expression in the same module scope that usesthat parameter, the value of the parameter will be the the user supplied value. This applies to expressions that are bound to other parameters — for example, consider the following module and interface definition.
+
+```
+module impl {
+    parameter voltage a = 3 mV;
+    parameter current I = (13 mV - a) / 20 kΩ;
+}
+
+interface point "foo" {
+    import impl;
+    export parameter impl.a as a;
+
+    effect current = impl.I;
+}
+```
+
+Models using the "foo" mechanism can set the parameter `a` to some voltage. If it remains unset, the mechanism supplies a non-specific current of 0.5 μA; if the model sets the parameter `a` to -7 mV, the parameter `I` in the `impl` module will have the value 1.0 µA, which will in turn be the supplied non-specific current.
+
+# Refactor from here
 
 Types, records and expressions are described below.
 
