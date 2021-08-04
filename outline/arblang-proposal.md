@@ -197,7 +197,7 @@ Numeric literals represent both fractional and integer literal values.
 >
 > _digit-group-separator_ ::= U+0027 `'` APOSTROPHE | _whitespace_
 >
-> _decimal-separator_ ::= U+002E `.` FULL STOP | _whitespace_
+> _decimal-separator_ ::= U+002E `.` FULL STOP
 >
 > _exponent_ ::= _whitespace_? _exponent-E_ | _exponent-alternate_
 >
@@ -267,7 +267,7 @@ Punctuation token definitions:
 
 > ***compare-less*** ::= `<`
 
-> ***compare-less-eqaul*** ::= `<=` | U+2264 `≤` LESS-THAN OR EQUAL TO
+> ***compare-less-equal*** ::= `<=` | U+2264 `≤` LESS-THAN OR EQUAL TO
 
 > ***compare-greater*** ::= `>`
 
@@ -320,30 +320,200 @@ Module and interface definitions are described below.
 
 ### Identifiers and scope
 
-Identifiers are represented by ***symbol*** tokens, and refer to a module, an imported module, a regime, a constant, a parameter, a function argument, an external binding, a record field, a type alias, a function, or a local value binding.
+Identifiers are represented by ***symbol*** tokens and depending on context, may refer to:
+1. a module,
+2. an imported module,
+3. a constant,
+4. a parameter,
+5. a function,
+6. an external binding,
+7. a type alias,
+8. a regime,
+9. a record field,
+10. a function argument,
+11. or a local value binding.
 
-Identifiers have a _scope_. With one exception for regime names, an identifer's scope does not precede the point where that identifier is introduced by some declaration or binding. The scopes are as follows:
+#### Scopes
+
+The association of an identifier with its referrent is called a _binding_, and that binding is valid only within a _scope_. With one exception for regime names, an identifer's scope does not precede the point where that identifier is introduced by some declaration or binding.
 
 **Global scope.**
 A module definition introduces the module name into the following global scope. The environment may also introduce module names defined in other arblang sources.
 
 **Module scope.**
-Parameter, constant, type alias, and function definitions have module scope, as do module imports and external bindings. The scope extends from after the definition or import, until the end of the enclosing module or interface definition.
+Within a module or interface definition, top-level parameter, constant, type alias, and function definitions have module scope, as do module imports and external bindings. The scope extends from after the definition or import, until the end of the enclosing module or interface. Identifiers bound in module scope can be made visible in other modules as a _qualified-identifier_ after a module import.
 
 **Function scope.**
 Function arguments have function scope, which extends until the end of the function definition.
 
 **Regime scope.**
-All top-level regime definitions in an interface have scope of the entire interface definition, even before the regime definition. The same applies within a region definition: the scope of an internal region identifier is the entire body of the region definition.
+All top-level regime definitions in an interface have as scope the entire interface definition, even preceding the regime definition. The same applies within a region definition: the scope of an internal region identifier is the entire body of the region definition. An internal region identifier is visible as a _qualified-identifier_ elsewhere within the same interface definition.
 
 **Expression scope.**
-`let` and `with` binding expressions introduce new identifiers that have as scope the final expression in the binding. Similarly function identifiers and type aliases introduced with `def` have as scope the final sub-expression in the `def` expression.
+`let` and `with` binding expressions introduce new identifiers that have as scope the final expression in the binding.
 
-Scopes are naturally nested, and identifiers bound in an outer scope which are rebound in an inner scope will have the inner binding in the inner scope, and the outer binding in the outer scope.
+**Record scope.**
+Field names introduced in a record type or record value have record scope, which extends to the end of the record type or record value construction.
 
-A _qualified-identifier_ identifies a definition in an imported module, or a sub-regime within a regime.
+Scope form a hierarchy of inner and outer scopes, with the outermost scope being the global scope.
+
+#### Context
+
+Two different identifers with the same ***symbol*** may be bound in the same scope, if they are in different _contexts_. There are five distinct contexts in arblang:
+1. Module context applies wherever a module name is being introduced in a module definition, or where a module is referenced in a module import clause.
+2. Type context applies in type expressions and where a type alias is introduced.
+3. Regime context applies in regime clauses and where a regime name is introduced in a regime definition.
+4. Record context applies to field names within a record type description or in a record value construction.
+5. Expression context applies within value expressions, function argument definitions, the definition of parameters, constants, functions, and in the association of an identifier with an imported module.
+
+#### Masking
+
+An identifer bound in a given context in an outer scope may be _masked_ by a binding of an identifier with the same ***symbol*** in an inner scope. This is permitted only in the following circumstances:
+1. An identifer bound in expression context in a function scope by a function argument or in expression scope by a `let` or `with` binding may mask an identifer in an outer scope.
+2. An identifier bound in regime context in an inner regime definition may mask a regime identifer in an outer regime or interface scope.
+
+It is otherwise an error to rebind an identifer in the same context.
+
+#### Qualified identifers
+
+A qualified identifer is a term of the form:
 
 > _qualified-identifier_ ::= ***symbol*** ( `.` ***symbol*** )\*
+
+A qualified identifier of the form α._id_, where α is a (qualified) identifier and _id_ is an identifier, is bound to the referent of _id_ in the scope determined by α:
+1. In an expression context, if α is bound to a record value, then α._id_ is bound to the value of the field named _id_ in α.
+3. In an expression context, if α is bound to an imported module, then α._id_ is bound to the constant, parameter, or function bound to _id_ in the module refered to by α.
+2. In a type context, if α is bound to an imported module, then α._id_ is bound to the type bound to _id_ in in the module refered to by α.
+3. In a region context, f α is bound to a regime, then α._id_ is bound to the inner regime named _id_ in α.
+
+#### Examples
+
+```
+# Binds 'foo' in module context, global scope.
+module foo {
+    # Binds 't' in expression context, module scope.
+    def t: time = 10 s;
+}
+
+module bar {
+    # Binds 'foo' in type context, module scope.
+    type foo = length;
+
+    # Binds 'foo' in expression context, module scope.
+    def foo: foo = 3 m;
+
+    # Refers to 'foo' in module context, from outer global scope.
+    # Binds 'F' in expression context, module scope.
+    import foo as F;
+
+    # Binds 'quux' in expression context, module scope.
+    def quux =
+        # 'let' rebinds 'F' in the subsequent expression context in
+        # expression scope.
+        #
+        # On the right hand side, 'F' is still bound to the module import,
+        # and 'u', a record field name, is bound in record context in the
+        # scope of the record value construct.
+        #
+        # 'F.t' is a qualified identifier, that is bound to the constant 't'
+        # defined in the module 'foo'.
+        let F = { u = F.t; };
+
+        # 'F' refers to the record above; 'F.u' is a qualified identifier
+        # that refers to the value bound to the field 'u' in 'F'.
+        F.u / 20 s;
+
+    # Error: foo cannot refer to both a value and an imported module in module scope.
+    import foo;
+
+    # Error: foo cannot refer to both a value and a function in module scope.
+    def foo = fn () → 4;
+}
+```
+
+### Types and literals
+
+Every expression has a type, which is either:
+
+1. Boolean.
+2. A quantity (see below).
+3. A record type, comprising an unordered sequence of named fields, with each field being either a quantity or another record type.
+4. A function.
+
+A type expression _type-expr_ identifies a particular type, and is used in type assertions and function argument specifiers. Function types have no corresponding type expression: expressions of a function type may only be bound to an identifier or used in a function application expression. In particular, they may not be used as an argument in a function application.
+
+A _type-expr_ is either `boolean`, a quantity term, a record type description, or a (qualified) identifier bound to a type expression by a type alias.
+
+> _type-expr_ ::= `boolean` | _quantity-term_ | _record-type-expr_ | _qualified-identifier_
+
+An expression of a given type can be constructed from type literals and constructors described below, as well as from operators acting on subexpressions (see the section _Expressions_).
+
+#### Boolean
+
+The boolean type has two possible values, true and false, and expressions of boolean type are constructed from the boolean literals and comparison expressions.
+
+> _boolean-literal_ ::= `true` | `false`
+
+The boolean literals are keywords in an expression context, and may not be used as identifiers in this context.
+
+#### Quantities
+
+Quantities represent physical quantities, which in turn comprise a magnitude and a physical dimension. The specific unit scale underlying the representation of a physical quantity is implicit.
+
+A quantity type is defined as a product term of named quantities such as voltage, time, resistance, etc. The set of named quantities is predefined, and cannot be extended within arblang.
+
+> _quantity-term_ ::= _quantity-name_ _quantity-exponent_? | _quantity-product_ | _quantity-quotient_
+>
+> _quantity-product_ ::= _quantity-term_ ( ***whitespace*** | ***multiplication-dot*** )  _quantity-term_
+>
+> _quantity-quotient_ ::= _quantity-term_ ***division-slash*** _quantity-term_
+>
+> _quantity-exponent_ ::= `^` ***numeric-literal*** |  ***superscript-literal***
+>
+> _quantity-name_ ::= `real` | `length` | `mass` | `time` | `current` | `temperature` | `amount` |
+>   `frequency` | `area` | `volume` | `velocity` | `acceleration` | `momentum` | `force` | `pressure` | `power` | `energy` |
+>   `entropy` | `charge` | `voltage` | `capacitance` | `inductance` | `resistance` | `conductance` | `molarity`
+
+Here, 'real' denotes the dimensionless (scalar) quantity.
+
+The named quantities above are chosen to represent ISQ quantities, but in some cases a single word is used to represent a longer ISQ quantity name to simplify the grammar. The named quantities are listed below with their equivalent ISQ quantity and dimensional expression in terms of the physical dimensions **L** (length), **M** (mass), **T** (time), **I** (electric current), **Θ*** (thermodynaic temperature), and **N** (amount of substance).
+
+| Arblang name   | ISQ name (if different)   | ISO document | Dimension      |
+|:---------------|:--------------------------|:-:-----------|:-:-------------|
+| `real`         | quantity of dimension one | 80000-1      | **1**          |
+| `length`       |                           | 80000-1      | **L**          |
+| `mass`         |                           | 80000-1      | **M**          |
+| `time`         |                           | 80000-1      | **T**          |
+| `current`      | electric current          | 80000-1      | **I**          |
+| `temperature`  | thermodynamic temperature | 80000-1      | **Θ**          |
+| `amount`       | amount of substance       | 80000-1      | **N**          |
+| `frequency`    |                           | 80000-3      | **T⁻¹**        |
+| `area`         |                           | 80000-3      | **L²**         |
+| `volume`       |                           | 80000-3      | **L³**         |
+| `velocity`     |                           | 80000-3      | **LT⁻¹**       |
+| `acceleration` |                           | 80000-3      | **LT⁻²**       |
+| `momentum`     |                           | 80000-4      | **LMT⁻¹**      |
+| `force`        |                           | 80000-4      | **LMT⁻²**      |
+| `pressure`     |                           | 80000-4      | **L⁻¹MT⁻²**    |
+| `power`        |                           | 80000-4      | **L²MT⁻³**     |
+| `energy`       | kinetic energy            | 80000-4      | **L²MT⁻²**     |
+|                | thermodynamic energy      | 80000-5      | **L²MT⁻²**     |
+| `entropy`      | entropy                   | 80000-5      | **L²MT⁻²Θ⁻¹**  |
+| `charge`       | electric charge           | 80000-6      | **TI**         |
+| `voltage`      |                           | 80000-6      | **L²MT⁻³I⁻¹**  |
+| `capacitance`  |                           | 80000-6      | **L⁻²M⁻¹T⁴I²** |
+| `inductance`   |                           | 80000-6      | **L²MT⁻²I⁻²**  |
+| `resistance`   |                           | 80000-6      | **L²MT⁻³I⁻²**  |
+| `conductance`  |                           | 80000-6      | **L⁻²M⁻¹T³I²** |
+| `molarity`     | amount-of-substance concentration | 800000-9 | **L⁻³N**   |
+
+The ***numeric-literal*** in a _quantity-exponent_ term must be integral — the token value may not contain a _decimal_separator_ or _exponent_. A non-integral exponent is a syntax error.
+
+
+#### Records
+
+
+#### Functions
 
 
 ### Modules and interfaces
@@ -352,22 +522,25 @@ Modules are used to collect parameters, constants, and function definitions; int
 
 #### Module definition
 
-> _module-defn_ ::= `module` ***symbol*** `{` ( _parameter-defn_ | _constant-defn_ | _type-defn_ | _function-defn_ | _module-import_ )\* `}`
+> _module-defn_ ::= `module` ***symbol*** `{` ( _type-alias_ | _parameter-defn_ | _constant-defn_ | _function-defn_ | _module-import_ )\* `}`
+>
+> _type-alias_ ::= `type` ***symbol*** `=` _type-expr_ `;`
 >
 > _parameter-defn_ ::= `parameter` _type-expr_? ***symbol*** `=` _expression_ `;`
 >
-> _constant-defn_ ::= `constant` _type-expr_? ***symbol*** `=` _expression_ `;`
+> _constant-defn_ ::= `def` ***symbol*** _type-assertion_? `=` _expression_ `;`
 >
-> _type-defn_ ::= `type` ***symbol*** `=` _type-expr_ `;`
+> _constant-defn_ ::= `def` ***symbol*** _type-assertion_? `=` _expression_ `;`
 >
-> _function-defn_ ::= `function` ***symbol*** _argument-list_ `=` _expression_ `;`
+> _function-defn_ ::= `fn` ***symbol*** _argument-list_ `=` _expression_ `;`
 >
 > _argument-list_ ::= `(` ( _type-expr_ ***symbol*** ( `,` _type-expr_ ***symbol*** )* )? `)`
 >
 > _module-import_ ::= `import` ***symbol*** ( `as` ***symbol*** )
+>
+> _type-assertion_ ::= `:` _type-expr_
 
-
-#### Interface definition syntax
+#### Interface definition
 
 **TODO**
 
@@ -400,6 +573,14 @@ module Y {
 
 **TODO**
 
+##### Notes
+
+As noted above in the section on identifiers, the same identifier may not be rebound within a module or interface definition, but _is_ permitted to refer to a type in a type context, a value inan expression context, and a module in an module import context.
+
+Type assertions are optional on the left hand side of `def` clauses, as the type of the value bound to the identifier is always deducible from the expression on the right hand side.
+
+The expression on the right hand side of a constant definition may depend only on identifiers bound to constants. Similarly, the expression on the right hand side of a parameter definition may depend only on identifiers bound to constants or other parameters.
+
 
 #### Alternative function and type alias syntax
 
@@ -409,14 +590,14 @@ The forms for function and type alias definitions above are quite different from
 
 Type definitions are only for record types:
 
-> _type-defn_ ::= `record` ***symbol*** `{` ( _type-expr_ ***symbol*** `;` )\* `}`
+> _type-alias_ ::= `record` ***symbol*** `{` ( _type-expr_ ***symbol*** `;` )\* `}`
 
 #### Parameter semantics
 
 A parameter definition introduces a new identifer in module scope, together with a default value. Parameters can be used in any following expression within the module.
 The expression to which a parameter is bound may not include identifiers that are bound in an interface to external quantities, but may include other parameters.
 
-Parameters that are exported in an interface can be bound to a user supplied value externally; they are nonetheless constant. In any expression in the same module scope that usesthat parameter, the value of the parameter will be the the user supplied value. This applies to expressions that are bound to other parameters — for example, consider the following module and interface definition.
+Parameters that are exported in an interface can be bound to a user supplied value externally; they are nonetheless constant. In any expression in the same module scope that uses that parameter, the value of the parameter will be the the user supplied value. This applies to expressions that are bound to other parameters — for example, consider the following module and interface definition.
 
 ```
 module impl {
