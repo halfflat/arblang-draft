@@ -7,7 +7,7 @@ The arblang language is constrained so that every evolution and effect can be in
 Arblang nonetheless can also be interpreted in a purely numerical fashion in other contexts.
 
 
-## Mechanism semantics
+# Mechanism semantics
 
 A mechanism can be one of a number of different _classes_ of mechanism, where each class determines the sort of cell interactions that the mechanism performs. The classes are pre-defined, but are open ended, in that further extensions to Arbor may admit new mechanism classes. The basic set of classes are described as follows:
 
@@ -20,7 +20,7 @@ A mechanism can be one of a number of different _classes_ of mechanism, where ea
 Each of these mechanisms can have a _state_ comprising zero or more named values that vary over time. Each mechanism definition will provide the initial values for this state, and define their evolution by an explicit system of ODEs.
 
 
-### External bindings
+## External bindings
 
 The definition of a mechanism allows for names to be bound to the mechanism state and various cellular quantities so that they can play a role in defining the evolution and effects of the mechanism.
 
@@ -43,7 +43,7 @@ The list of possible cellular quantities is open to future extension, but initia
 Not every mechanism class has access to every cellular quantity. In particular, only concentration models have access to current densities and molar fluxes.
 
 
-### Effects
+## Effects
 
 Effects define how the mechanism state influences the cellular state. The list of possible effects is open to future extension, but the initial effects are as follows:
 
@@ -62,11 +62,13 @@ A mechanism can define an effect in terms of an ionic current (or current densit
 Restrictions:
 
 * Concentration models can only have concentratione effects.
+
 * Point mechanisms can only have current or molar flow rate effects.
+
 * Density mechanisms can only have current density or molar flux effects.
 
 
-### Events
+## Events
 
 As noted above, point mechanisms can receive _events_, upon which their state can be modified according to some formula. There are currently two supported sorts of events:
 
@@ -75,36 +77,46 @@ As noted above, point mechanisms can receive _events_, upon which their state ca
 * _Post_ is triggered when a spike is generated on the post-synaptic cell. There may be a delay between the spike generation and the _post_ event; the value of the _post_ event is the time between the spike generation and the event delivery.
 
 
-### Parameters
+## Parameters
 
 A mechanism can include _parameters_. These are named quantities with a default value that are constant throughout the evolution of a mechanism's state, but which can be overriden with user-supplied values when the mechanism is used in a cell model.
 
 For a parameter to be settable, it must be explicitly exported in the mechanism definition.
 
 
-## Lexical grammar
+# Lexical grammar
 
 Tokenization is governed by a grammar, described below in a variant of BNF, with the notation:
 
 * Names for non-terminals are written in _italics_ and may not contain spaces.
+
 * Non-terminals that constitue tokens are written in ***bold-italics***.
+
 * Terminals are written in `monospace`, denoting the exact character sequence thus represented.
+
 * A terminal may also be written as a unicode code point, as 'U+' followed by four or five hexadecimal digits followed optionally by the literal character and then optionally by the unicode name in all capitals.
+
 * A set of single character terminals can be denoted by {expr} where _expr_ is a one- or two-letter Unicode general category abbreviation, indicating the corresponding collection of characters, or a binary Unicode property, indicating the collection of characters for which the property has the value 'Yes'.
+
 * A set of single character terminals can also be denoted by a character class […] following the syntax described in [Unicode Regular Expressions](https://www.unicode.org/reports/tr18) sections 0.1.1, 1.2.4, and 1.3.
+
 * Symbols can be grouped with parentheses.
+
 * Alternatives are delimitted by a vertical bar |.
+
 * An asterisk indicates the preceding symbol or group is repeated zero or more times.
+
 * A plus sign indicates the preceding symbol or group is repeated one or more times.
+
 * A question mark indicates the preceding symbol or group may be omitted, that is, it can appear at most one time.
 
 
-### Character set
+## Character set
 
 Arblang source is represented as a sequence of Unicode characters in normalization form C (NFC), excluding unassigned characters, surrogate code points, noncharacters, and byte order marks. It is the responsibility of the interpreting environment to transform any particular source encoding to this representation.
 
 
-### Tokenization
+## Tokenization
 
 A lexically valid Arblang source must admit a tokenization as a sequence of ***comment*** tokens, ***whitespace*** tokens, ***symbol*** tokens, ***string-literal*** tokens, ***superscript-literal*** tokens, ***numeric-literal*** tokens, and punctuation tokens.
 
@@ -112,7 +124,7 @@ A token has an associated value, which may be empty. If not empty, it is the res
 With the exception of string literals, canonicalization first applies Unicode compatibility normalization NFKC to the token text, then further processing as detailed below.
 
 
-#### Comments
+### Comments
 
 A comment is introduced by `#` and then extends to the end of the line. It is the only context in which a line end is not regarded simply as whitespace.
 
@@ -128,27 +140,27 @@ A comment is introduced by `#` and then extends to the end of the line. It is th
 >
 > _other-new-line_ ::= U+0085 NEXT LINE | U+2028 LINE SEPARATOR | U+2029 PARAGRAPH SEPARATOR
 
-##### Token value
+#### Token value
 
 A ***comment*** token has no value.
 
-##### Notes
+#### Notes
 
 A _comment-character_ is any character that is not the first character of _new-line_. New line characters and sequences correspond to the [line boundaries requirement RL1.6 of Unicode Regular Expressions](https://www.unicode.org/reports/tr18/#RL1.6).
 
 
-#### Whitespace
+### Whitespace
 
 In some expressions, where it denotes multiplication, whitepace is mandatory, but otherwise whitespace is not significant. It comprises any non-empty sequence of characters with the White_Space property.
 
 > ***whitespace*** ::= {White_Space}\+
 
-##### Token value
+#### Token value
 
 A ***whitespace*** token has no value.
 
 
-#### Symbols
+### Symbols
 
 Symbols correspond to Arblang identifiers and keywords. Arblang keywords are generally contextual: the interpretation of a symbol as an identifier or a keyword is determined in parsing.
 
@@ -160,11 +172,11 @@ Symbols correspond to Arblang identifiers and keywords. Arblang keywords are gen
 >
 > _prime-mark_ ::= U+0027 `'` APOSTROPHE | U+02B9 `ʹ` MODIFIER LETTER PRIME | U+2032 `′` PRIME
 
-##### Token value
+#### Token value
 
 Canonicalization substitutes any character in _prime-mark_ with U+0027 APOSTROPHE after performing NFKC normalization.
 
-##### Notes
+#### Notes
 
 Identifiers broadly follow the conventions of Python, except:
 * `_` is not a valid _symbol-start_.
@@ -172,7 +184,7 @@ Identifiers broadly follow the conventions of Python, except:
 * Characters that are only _compatibility_ equivalent to an acceptable _symbol_ character are not permitted. In particular, superscript numerals are not permitted within a _symbol_.
 
 
-#### Superscript literals
+### Superscript literals
 
 A superscript literal is used to denote exponents in the absence of the exponentiation operator.
 
@@ -182,12 +194,12 @@ A superscript literal is used to denote exponents in the absence of the exponent
 >
 > _superscript-digit_ ::= `⁰` | `¹` | `²` | `³` | `⁴` | `⁵` | `⁶` | `⁷` | `⁸` | `⁹`
 
-##### Token value
+#### Token value
 
 After NFKC normalization, which takes superscript digits and minus to regular digits and U+2212 MINUS SIGN, the token value is canonicalized by mapping U+2212 to U+002d `-` HYPHEN-MINUS.
 
 
-#### Numeric literals
+### Numeric literals
 
 Numeric literals represent both fractional and integer literal values.
 
@@ -207,7 +219,7 @@ Numeric literals represent both fractional and integer literal values.
 >
 > _sign_ ::= U+002B `+` PLUS SIGN | U+002D `-` HYPHEN-MINUS | U+2212 `−`MINUS SIGN
 
-##### Token value
+#### Token value
 
 After normalization, which takes superscript digits and minus to regular digits and U+2212 MINUS SIGN, the token value is canonicalized as follows.
 * Any _digit-group-separator_ is removed (including all whitespace).
@@ -215,7 +227,7 @@ After normalization, which takes superscript digits and minus to regular digits 
 * U+002B PLUS SIGN is removed.
 * Exponential markers `e` and `×10` are replaced with `E`.
 
-##### Notes
+#### Notes
 
 * The use of whitespace as a digit group separator is intended to accommodate SI practice of writing long numbers, e.g. `10 000 000` for 10⁶.
 * The alternate scientific number syntax `1.234 45 × 10³` is allowed in order to support standard SI practice. `×` is not used elsewhere as an arithmetic operator.
@@ -223,7 +235,7 @@ After normalization, which takes superscript digits and minus to regular digits 
 * In order to accommodate loss-free rescaling of unit-bearing quantities, real and integer literals in arithmetic contexts should have an internal representation that maintains a normalized signifcand and a power of ten scale.
 
 
-#### String literals
+### String literals
 
 String literals encode arbitrary character sequences used to specify and identify interface and species names.
 
@@ -231,16 +243,16 @@ String literals encode arbitrary character sequences used to specify and identif
 >
 > _escape-sequence_ ::= `\\` | `\"`
 
-##### Token value
+#### Token value
 
 The value is taken as the characters between the initial and final `"` characters, followed by the replacement of each _escape-sequence_: `\\` by `\` and `\"` by `"`.
 
-##### Notes
+#### Notes
 
 The value of a ***string-literal*** token does _not_ undergo NFKC normalization, and so comprises an arbitrary sequence of Unicode characters in NFC normalization. While the syntax allows arbitary white space within a literal, including line separators and similar, the interpreting environment might impose further restrictions on what constitutes a valid interface name, for example.
 
 
-#### Punctuation
+### Punctuation
 
 > _punctuation_ ::=
 >     ***plus-sign*** | ***minus-sign*** | ***multiplication-dot*** | ***division-slash*** | ***exponent-op*** |
@@ -299,17 +311,19 @@ Punctuation token definitions:
 
 > ***period*** ::= `.`
 
-##### Token value
+#### Token value
 
 Punctuation tokens have no value.
 
 
-## Arblang syntax and semantics
+# Arblang syntax and semantics
 
 The syntax definitions below are defined in terms of the tokens defined in the lexical grammar, with the following conventions:
 
 * A ***symbol*** token can represent an identifier or a keyword; keywords in the syntax descriptions are written in `monospace`, and should be interpreted as ***symbol*** tokens with the corresponding value.
+
 * Where ***whitespace*** is present in a syntax rule, it is required, but additional ***whitespace*** tokens are permitted anywhere in the (tokenized) arblang source, where they are ignored.
+
 * For readability in syntax rules, the text representation of a punctuation token, styled monospace, may stand in for the punctuation token itself. So, for example, `=` might stand for the token ***assign-equal***.
 
 An arblang source document comprises a series of module and interface definitions.
@@ -318,7 +332,7 @@ An arblang source document comprises a series of module and interface definition
 
 Module and interface definitions are described below.
 
-### Identifiers and scope
+## Identifiers and scope
 
 Identifiers are represented by ***symbol*** tokens and depending on context, may refer to:
 1. a module,
@@ -333,7 +347,7 @@ Identifiers are represented by ***symbol*** tokens and depending on context, may
 10. a function argument,
 11. or a local value binding.
 
-#### Scopes
+### Scopes
 
 The association of an identifier with its referrent is called a _binding_, and that binding is valid only within a _scope_. With one exception for regime names, an identifer's scope does not precede the point where that identifier is introduced by some declaration or binding.
 
@@ -357,36 +371,41 @@ Field names introduced in a record type or record value have record scope, which
 
 Scope form a hierarchy of inner and outer scopes, with the outermost scope being the global scope.
 
-#### Context
+### Context
 
 Two different identifers with the same ***symbol*** may be bound in the same scope, if they are in different _contexts_. There are five distinct contexts in arblang:
-1. Module context applies wherever a module name is being introduced in a module definition, or where a module is referenced in a module import clause.
-2. Type context applies in type expressions and where a type alias is introduced.
-3. Regime context applies in regime clauses and where a regime name is introduced in a regime definition.
-4. Record context applies to field names within a record type description or in a record value construction.
-5. Expression context applies within value expressions, function argument definitions, the definition of parameters, constants, functions, and in the association of an identifier with an imported module.
 
-#### Masking
+1. _Module_ context applies wherever a module name is being introduced in a module definition, or where a module is referenced in a module import clause.
+2. _Type context_ applies in type expressions and where a type alias is introduced.
+3. _Regime context_ applies in regime clauses and where a regime name is introduced in a regime definition.
+4. _Record context_ applies to field names within a record type description or in a record value construction.
+5. _Expression context_ applies within value expressions, function argument definitions, the definition of parameters, constants, functions, and in the association of an identifier with an imported module.
+
+Each context can be regarded as constituting a different namespace for identifiers.
+
+### Masking
 
 An identifer bound in a given context in an outer scope may be _masked_ by a binding of an identifier with the same ***symbol*** in an inner scope. This is permitted only in the following circumstances:
+
 1. An identifer bound in expression context in a function scope by a function argument or in expression scope by a `let` or `with` binding may mask an identifer in an outer scope.
 2. An identifier bound in regime context in an inner regime definition may mask a regime identifer in an outer regime or interface scope.
 
-It is otherwise an error to rebind an identifer in the same context.
+It is otherwise an error to bind an identifer with the same ***symbol*** as an already bound identifier in the same context.
 
-#### Qualified identifers
+### Qualified identifers
 
 A qualified identifer is a term of the form:
 
 > _qualified-identifier_ ::= ***symbol*** ( `.` ***symbol*** )\*
 
 A qualified identifier of the form α._id_, where α is a (qualified) identifier and _id_ is an identifier, is bound to the referent of _id_ in the scope determined by α:
+
 1. In an expression context, if α is bound to a record value, then α._id_ is bound to the value of the field named _id_ in α.
 3. In an expression context, if α is bound to an imported module, then α._id_ is bound to the constant, parameter, or function bound to _id_ in the module refered to by α.
 2. In a type context, if α is bound to an imported module, then α._id_ is bound to the type bound to _id_ in in the module refered to by α.
 3. In a region context, f α is bound to a regime, then α._id_ is bound to the inner regime named _id_ in α.
 
-#### Examples
+### Examples
 
 ```
 # Binds 'foo' in module context, global scope.
@@ -431,7 +450,7 @@ module bar {
 }
 ```
 
-### Types and literals
+## Types and literals
 
 Every expression has a type, which is either:
 
@@ -448,7 +467,7 @@ A _type-expr_ is either `boolean`, a quantity term, a record type description, o
 
 An expression of a given type can be constructed from type literals and constructors described below, as well as from operators acting on subexpressions (see the section _Expressions_).
 
-#### Boolean
+### Boolean
 
 The boolean type has two possible values, true and false, and expressions of boolean type are constructed from the boolean literals and comparison expressions.
 
@@ -456,7 +475,7 @@ The boolean type has two possible values, true and false, and expressions of boo
 
 The boolean literals are keywords in an expression context, and may not be used as identifiers in this context.
 
-#### Quantities
+### Quantities
 
 Quantities represent physical quantities, which in turn comprise a magnitude and a physical dimension. The specific unit scale underlying the representation of a physical quantity is implicit.
 
@@ -474,12 +493,14 @@ A quantity type is defined as a product term of named quantities such as voltage
 >   `frequency` | `area` | `volume` | `velocity` | `acceleration` | `momentum` | `force` | `pressure` | `power` | `energy` |
 >   `entropy` | `charge` | `voltage` | `capacitance` | `inductance` | `resistance` | `conductance` | `molarity`
 
-Here, 'real' denotes the dimensionless (scalar) quantity.
+Here, `real` denotes the dimensionless (scalar) quantity.
 
 The named quantities above are chosen to represent ISQ quantities, but in some cases a single word is used to represent a longer ISQ quantity name to simplify the grammar. The named quantities are listed below with their equivalent ISQ quantity and dimensional expression in terms of the physical dimensions **L** (length), **M** (mass), **T** (time), **I** (electric current), **Θ*** (thermodynaic temperature), and **N** (amount of substance).
 
+> |:---------------|:--------------------------|:-:-----------|:-:-------------|
+
 | Arblang name   | ISQ name (if different)   | ISO document | Dimension      |
-|:---------------|:--------------------------|:-:-----------|:-:-------------|
+|----------------|---------------------------|--------------|----------------|
 | `real`         | quantity of dimension one | 80000-1      | **1**          |
 | `length`       |                           | 80000-1      | **L**          |
 | `mass`         |                           | 80000-1      | **M**          |
@@ -510,17 +531,17 @@ The named quantities above are chosen to represent ISQ quantities, but in some c
 The ***numeric-literal*** in a _quantity-exponent_ term must be integral — the token value may not contain a _decimal_separator_ or _exponent_. A non-integral exponent is a syntax error.
 
 
-#### Records
+### Records
 
 
-#### Functions
+### Functions
 
 
-### Modules and interfaces
+## Modules and interfaces
 
 Modules are used to collect parameters, constants, and function definitions; interfaces are used to define a particular sort of Arbor functionality, such as ion channel or gap junction dynamics. Module and interface definitions can only be provided at top level.
 
-#### Module definition
+### Module definition
 
 > _module-defn_ ::= `module` ***symbol*** `{` ( _type-alias_ | _parameter-defn_ | _constant-defn_ | _function-defn_ | _module-import_ )\* `}`
 >
@@ -540,11 +561,11 @@ Modules are used to collect parameters, constants, and function definitions; int
 >
 > _type-assertion_ ::= `:` _type-expr_
 
-#### Interface definition
+### Interface definition
 
 **TODO**
 
-##### Module imports
+#### Module imports
 
 Identifiers bound in module scope in one module can be used in another module or interface, if the module is imported. If a module `A` is imported as `B`, a type, parameter, constant, or function _x_ defined in `A` can be referenced with the qualified identifier `B`._x_.
 
@@ -565,15 +586,15 @@ module Y {
 }
 ```
 
-#### Function definitions
+### Function definitions
 
 **TODO**
 
-#### Type aliases
+### Type aliases
 
 **TODO**
 
-##### Notes
+#### Notes
 
 As noted above in the section on identifiers, the same identifier may not be rebound within a module or interface definition, but _is_ permitted to refer to a type in a type context, a value inan expression context, and a module in an module import context.
 
@@ -582,7 +603,7 @@ Type assertions are optional on the left hand side of `def` clauses, as the type
 The expression on the right hand side of a constant definition may depend only on identifiers bound to constants. Similarly, the expression on the right hand side of a parameter definition may depend only on identifiers bound to constants or other parameters.
 
 
-#### Alternative function and type alias syntax
+### Alternative function and type alias syntax
 
 The forms for function and type alias definitions above are quite different from earlier proposals; these are reprised here if the new proposed forms are rejected:
 
@@ -592,7 +613,7 @@ Type definitions are only for record types:
 
 > _type-alias_ ::= `record` ***symbol*** `{` ( _type-expr_ ***symbol*** `;` )\* `}`
 
-#### Parameter semantics
+### Parameter semantics
 
 A parameter definition introduces a new identifer in module scope, together with a default value. Parameters can be used in any following expression within the module.
 The expression to which a parameter is bound may not include identifiers that are bound in an interface to external quantities, but may include other parameters.
@@ -653,11 +674,11 @@ The sets of possible bindable states, effects, and interface classes are finite,
 >
 > &lt;species-name&gt; ::= &lt;string-literal&gt;
 
-### Module semantics
+## Module semantics
 
 **TODO:** explain parameters; module imports.
 
-### Interface semantics
+## Interface semantics
 
 An interface provides, generally:
 
@@ -684,7 +705,7 @@ Exports make parameters visible and settable by models that employ the interface
 
 If the interface doesn't require any evolving state, it can omit the `initial` and `evolve` definitions.
 
-#### Density models
+### Density models
 
 Density models represent a process which is distributed over an areal extent of the cell membrane. Parameters defined in density models may be labelled as `density` parameters — such parameters are declared to be safe to interpolate, and can be used with spatitally varying scaling, for example.
 
@@ -694,7 +715,7 @@ Effects: current density (non-specific); current density "_species_"; molar flux
 
 Events: only boolean-valued expressions.
 
-#### Discrete models
+### Discrete models
 
 Discrete models capture localized effects and can react in response to incoming spike events or post-synaptic spike detection events. They may not have `density` parameters.
 
@@ -704,7 +725,7 @@ Effects: current (non-specific); current "_species_"; molar flow rate "_species_
 
 Events: any.
 
-#### Concentration models
+### Concentration models
 
 Concentration models determine the internal and/or external concentration of a species over time. As specified, only one concentration model can be used to determine the state of a species in any given region of a cell. The initial value of the state determines the initial value(s) of the concentration.
 
@@ -714,7 +735,7 @@ Effects: internal/external concentration "_species_".
 
 Events: only boolean-valued expressions.
 
-#### Alternative concentration model
+### Alternative concentration model
 
 There are a couple of problems with specifying concentration evolution with concentration models as outlined above:
 * Concentration models cannot be combined for any given species.
@@ -774,11 +795,11 @@ interface concentration "CaBuffered" {
 }
 ```
 
-### Function definitions
+## Function definitions
 
 **TODO**
 
-## Types and type expressions
+# Types and type expressions
 
 Every expression has a type, which is either:
 
@@ -801,7 +822,7 @@ A type expression &lt;type-expr&gt; describes a type; different type expressions
 
 | &lt;type-expr&gt; ::= `boolean` | &lt;quantity-expr&gt; | &lt;record-type-expr&gt;
 
-### Quantities
+## Quantities
 
 Quantities represent physical quantities, which in turn comprise a magnitude and a physical dimension. The specific unit scale underlying the representation of a physical quantity is implicit.
 
@@ -875,7 +896,7 @@ let voltage v = 23 * 10 mV - 2 μV;
 
 **Note:** Luminous intensity is excluded above, but perhaps we should include it for completeness.
 
-### Record types
+## Record types
 
 A record is a labelled unordered tuple of values which are either quantities or records themselves. A record may not have two fields of the same name. A record type specification has the syntax:
 
@@ -891,7 +912,7 @@ A record is a labelled unordered tuple of values which are either quantities or 
 
 A record alias is an identifier that has bound to a record type in a record alias definition (see above).
 
-#### Record type aliases and derivative records.
+### Record type aliases and derivative records.
 
 See the Modules and Interfaces section for the definition syntax.
 
@@ -912,20 +933,20 @@ the type `bar'` is equivalent to the definition
     }
 ```
 
-#### Row polymorphism
+### Row polymorphism
 
 A record type is a _subrecord_ of another type for every field _F_ in the first record type is also a field _G_ in the second record type with the same field name, and the type of _F_ is either the same as the type of _G_ or is a subrecord of the type of _G_.
 
 **TODO:** a record supertype can be bound to a parameter or identifier with a specified record subtype.
 
-## Expressions
+# Expressions
 
 An expression corresponds to something that can be evaluated to give a value. They can be a literal value, or some
 combination of literal values, bound identifiers, arithemetic and record operations, function invocations, local bindings, and comparisons.
 
 > &lt;expression&gt; = &lt;value-literal&gt; | `(` &lt;expression;&gt; `)` | &lt;function-call&gt; | &lt;arithemtic-expr&gt; | &lt;record-expr&gt; | &lt;boolean-expr&gt; | &lt;conditional-expr&gt; | &lt;let-expr&gt; | &lt;with-expr&gt;
 
-### Literal values
+## Literal values
 
 A literal scalar value is just a decimal representation of a real number,
 while a non-scalar literal value is written as a decimal number followed by a unit
@@ -972,7 +993,7 @@ or with maximum clarity, by
 
 The type of a literal value is the quantity that is dimensionaly compatible with the given unit.
 
-### Boolean expressions and conditionals
+## Boolean expressions and conditionals
 
 Boolean expressions are those expressions that evalue to a boolean value. They comprise the boolean literals `true` and `false`, and comparisons.
 
@@ -986,7 +1007,7 @@ Conditional expressions evaluate to one of two sub-expressions based on a boolea
 
 > &lt;conditional-expr&gt; ::= `if` &lt;expression&gt; `;` `then` &lt;expression&gt; `else` &lt;expression&gt;
 
-#### Alternative conditional syntax
+### Alternative conditional syntax
 
 In order to avoid nested `if` expressions, we could also or instead adopt a guard-style syntax. The last clause must have condition `true`, or as syntactic sugar, `otherwise`.
 
@@ -999,13 +1020,13 @@ let q =
   | otherwise => sin(a)/a;
 ```
 
-#### Semantics
+### Semantics
 
 Comparisons can only be performed between quality values of the same type, or between records that are of the same type, or where one is a subrecord of the other. For record comparisons, the expression evaluates to true if the comparison holds true for each field in the subrecord.
 
 Logical operations are only defined for boolean values.
 
-### Arithmetic expressions
+## Arithmetic expressions
 
 Arithmetic operations — multiplication, division, addition and subtraction —
 can be used to form expressions involving values provided that there is
@@ -1015,7 +1036,7 @@ circumstances.
 
 **TODO**: All the details.
 
-### Record expressions
+## Record expressions
 
 A record values can be specified by the field values in a record construction:
 
@@ -1048,7 +1069,7 @@ let q = p : { b = 20 A; };
 ```
 the identifier `q` is bound to the record value `{ a = 3.0; b = 20 A; }`.
 
-### Local binding expressions
+## Local binding expressions
 
 `let` and `with` bind identifiers to expressions or record fields. `with` could also possibly be used to bring into scope identifiers defined in an imported module.
 
@@ -1059,9 +1080,9 @@ The identifiers introduced by `let` or `with` have only the terminal expression 
 
 **TODO:** Examples!
 
-## Syntax discussion and alternatives
+# Syntax discussion and alternatives
 
-### Semicolons
+## Semicolons
 
 The proposal above requires semicolons only in three circumstances: when associating or binding something after an equals sign; when making local bindings in a with-expression; after a conditional in a when-clause; or when declaring fields in a record type:
 ```
@@ -1104,7 +1125,7 @@ let A = 3 A; A - 4 A
 Why not have semicolons more commonly? It's certainly possible: they could be added after every `import` or record alias or function definition, but it is not necessary for the resolution of ambiguities. An alternate function and alias syntax described below could help unify some of these syntaxes.
 
 
-### Function alternatives and type aliases
+## Function alternatives and type aliases
 
 As presented above, functions are fairly inflexible: they can only be defined in module/interface scope, and they are not permitted to be polymorphic.
 
@@ -1146,7 +1167,7 @@ def nernst = std.nernst; # 'nernst' is another name for the 'std.nernst' functio
 
 If `def foo = fn (...) { ... };` looks a little verbose, we could keep `def foo(...) { ... }` as syntactic sugar.
 
-### Magic keywords and extension points
+## Magic keywords and extension points
 
 Within an interface block, there are specific points within the permitted syntax where keywords are used to refer to interface-specific values or concepts, and which constitute natural places for future extensions of the interface block to support new functionality:
 
