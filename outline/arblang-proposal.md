@@ -164,13 +164,15 @@ A ***whitespace*** token has no value.
 
 Symbols correspond to Arblang identifiers and keywords. Arblang keywords are generally contextual: the interpretation of a symbol as an identifier or a keyword is determined in parsing.
 
-> ***symbol*** ::= _symbol-start_ _symbol-continue_\*
+> ***symbol*** ::= _symbol-start_ _symbol-continue_\* | _symbol-degree-prefixed_
 >
 > _symbol-start_ ::= {L} | {Nl} | {Other_ID_Start}
 >
 > _symbol-continue_ ::= _symbol-start_ | {Nd} | {Mn} | {Mc} | {Pc} | _prime-mark_
 >
 > _prime-mark_ ::= U+0027 `'` APOSTROPHE | U+02B9 `ʹ` MODIFIER LETTER PRIME | U+2032 `′` PRIME
+>
+> _symbol-degree-prefixed_ ::= U+00B0 `°` DEGREE SIGN {L}+ | U+2109 `℉` DEGREE FARENHEIT | U+2109 `℃` DEGREE CENTIGRADE
 
 #### Token value
 
@@ -181,6 +183,7 @@ Canonicalization substitutes any character in _prime-mark_ with U+0027 APOSTROPH
 Identifiers broadly follow the conventions of Python, except:
 * `_` is not a valid _symbol-start_.
 * A ***symbol*** may contain _prime-mark_ characters.
+* Special degree-sign prefixed symbols are permitted, in order to represent temperature scales. Compatability characters U+2109 `℉` and U+2109 `℃` will be converted to `°F` and `°C` respectively in NFKC normalization.
 * Characters that are only _compatibility_ equivalent to an acceptable _symbol_ character are not permitted. In particular, superscript numerals are not permitted within a _symbol_.
 
 
@@ -481,23 +484,23 @@ Quantities represent physical quantities, which in turn comprise a magnitude and
 
 A quantity type is defined as a product term of named quantities such as voltage, time, resistance, etc. The set of named quantities is predefined, and cannot be extended within arblang.
 
-> _quantity-term_ ::= _quantity-name_ _quantity-exponent_? | _quantity-product_ | _quantity-quotient_
+> _quantity-term_ ::= _quantity-name_ _integer-exponent_? | _quantity-product_ | _quantity-quotient_
 >
 > _quantity-product_ ::= _quantity-term_ ( ***whitespace*** | ***multiplication-dot*** )  _quantity-term_
 >
 > _quantity-quotient_ ::= _quantity-term_ ***division-slash*** _quantity-term_
 >
-> _quantity-exponent_ ::= `^` ***numeric-literal*** |  ***superscript-literal***
+> _integer-exponent_ ::= `^` ***numeric-literal*** |  ***superscript-literal***
 >
 > _quantity-name_ ::= `real` | `length` | `mass` | `time` | `current` | `temperature` | `amount` |
 >   `frequency` | `area` | `volume` | `velocity` | `acceleration` | `momentum` | `force` | `pressure` | `power` | `energy` |
 >   `entropy` | `charge` | `voltage` | `capacitance` | `inductance` | `resistance` | `conductance` | `molarity`
 
+The ***numeric-literal*** in an _integer-exponent_ term must be integral — the token value may not contain a _decimal_separator_ or _exponent_. A non-integral exponent is a syntax error.
+
 Here, `real` denotes the dimensionless (scalar) quantity.
 
 The named quantities above are chosen to represent ISQ quantities, but in some cases a single word is used to represent a longer ISQ quantity name to simplify the grammar. The named quantities are listed below with their equivalent ISQ quantity and dimensional expression in terms of the physical dimensions **L** (length), **M** (mass), **T** (time), **I** (electric current), **Θ*** (thermodynaic temperature), and **N** (amount of substance).
-
-> |:---------------|:--------------------------|:-:-----------|:-:-------------|
 
 | Arblang name   | ISQ name (if different)   | ISO document | Dimension      |
 |----------------|---------------------------|--------------|----------------|
@@ -526,9 +529,106 @@ The named quantities above are chosen to represent ISQ quantities, but in some c
 | `inductance`   |                           | 80000-6      | **L²MT⁻²I⁻²**  |
 | `resistance`   |                           | 80000-6      | **L²MT⁻³I⁻²**  |
 | `conductance`  |                           | 80000-6      | **L⁻²M⁻¹T³I²** |
-| `molarity`     | amount-of-substance concentration | 800000-9 | **L⁻³N**   |
+| `molarity`     | amount-of-substance concentration | 80000-9 | **L⁻³N**    |
 
-The ***numeric-literal*** in a _quantity-exponent_ term must be integral — the token value may not contain a _decimal_separator_ or _exponent_. A non-integral exponent is a syntax error.
+For arblang, two quantity type expressions are deemed equivalent if they have the same physical dimensionality. Equivalent type expressions describe the same type.
+
+Quantity literals are composed from a ***numeric-literal*** and a _unit-term_ suffix. Units are represented by keywords corresponding to combinations of SI unit prefixes and SI unit abbreviations, and similarly to quantities, are composed via multiplication, division, and integer exponentiation.
+
+> _quantity-literal_ ::= ***numeric-literal*** ***whitespace*** _unit-term_
+>
+> _unit-term_ ::= _unit-name_ _integer-exponent_? | _unit-product_ | _unit-quotient_
+>
+> _unit-product_ ::= _unit-term_ ( ***whitespace*** | ***multiplication-dot*** )  _unit-term_
+>
+> _unit-quotient_ ::= _unit-term_ ***division-slash*** _unit-term_
+>
+> _unit-name_ ::= ***symbol***
+
+A valid unit name is a ***symbol***, but are _lexically_ described as follows.
+
+> _unit-name_ ::= `°C` | _unit-SI-prefix_? _unit-metric_
+>
+> _unit-SI-prefix_ ::=  `Y` | `Z` | `E` | `P` | `T` | `G` | `M` | `k` | `h` | `da` | `d` | `c` | `m` | `μ` | `u` | `n` | `p` | `f` | `a` | `z` | `y`
+>
+> _unit-metric_ ::= `m` | `g` | `s` | `A` | `K` | `mol` | `Hz` | `L` | `l` |  `N` | `Pa` | `W` | `J` | `C` | `V` | `F` | `H` | `Ω` | `Ohm` | `S` | `M` | `kat`
+
+Unit prefixes are SI unit prefix symbols, with the addition of `u` for micro-:
+
+| Unit prefix | SI unit name | Multiple |
+|-------------|--------------|----------|
+| `Y`  | yotta | 10²⁴  |
+| `Z`  | zetta | 10²¹  |
+| `E`  | exa   | 10¹⁸  |
+| `P`  | peta  | 10¹⁵  |
+| `T`  | tera  | 10¹²  |
+| `G`  | giga  | 10⁹   |
+| `M`  | mega  | 10⁶   |
+| `k`  | kilo  | 10³   |
+| `h`  | hecto | 10²   |
+| `da` | deca  | 10¹   |
+| `d`  | deci  | 10⁻¹  |
+| `c`  | centi | 10⁻²  |
+| `m`  | milli | 10⁻³  |
+| `μ`  | micro | 10⁻⁶  |
+| `u`  | micro | 10⁻⁶  |
+| `n`  | nano  | 10⁻⁹  |
+| `p`  | pico  | 10⁻¹² |
+| `f`  | femto | 10⁻¹⁵ |
+| `a`  | atto  | 10⁻¹⁸ |
+| `z`  | zepto | 10⁻²¹ |
+| `y`  | yocto | 10⁻²⁴ |
+
+Arblang metric units, and their corresponding arblang quantities:
+
+| Unit  | Name    | Arblang quantity |
+|-------|---------|------------------|
+| `m`   | metre   | `length`         |
+| `g`   | gram    | `mass`           |
+| `s`   | second  | `time`           |
+| `A`   | ampere  | `current`        |
+| `K`   | kelvin  | `temperature`    |
+| `mol` | mole    | `amount`         |
+| `Hz`  | hertz   | `frequency`      |
+| `L`   | litre   | `volume`         |
+| `l`   | litre   | `volume`         |
+| `N`   | newton  | `force`          |
+| `Pa`  | pascal  | `pressure`       |
+| `W`   | watt    | `power`          |
+| `J`   | joule   | `energy`         |
+| `C`   | coulomb | `charge`         |
+| `V`   | volt    | `voltage`        |
+| `F`   | farad   | `capacitance`    |
+| `H`   | henry   | `inductance`     |
+| `Ω`   | ohm     | `resistance`     |
+| `Ohm` | ohm     | `resistance`     |
+| `S`   | siemens | `conductance`    |
+| `M`   | molar   | `molarity`       |
+| `kat` | katal   | `amount/time`    |
+
+Note that the non-SI unit 'molar' is equal to 1 mol/L.
+
+#### Notes
+
+There is one unit, degrees Celsius °C, which is not zero-based. Depending on context, a value expressed as _x_ °C may represent an absolute temperature, viz. (_x_+273.15) kelvin, or a temperature difference of _x_ kelvin. To avoid confusion, it is recommended that any arblang source only use °C to represent the former. For the interpretation of arblang, there are three chief possibilities, in order of increasing sophistication:
+
+1. Simplest: always automatically convert _x_ °C to (_x_+273.15) kelvin. Use of a Celsius temperature literal in non-absolute contexts is an unflagged semantic error.
+2. Conservative contextual approach: subtraction is always regarded as representing a difference, so that two compatible offset or offset-free values may be subtracted, giving an offset-free value; an offset value may be the left hand summand in an addition with a compatible non-offset value, giving an offset value. All other arithmetical expressions constitute a type error.
+3. Fully contextual approach: as above, save that an offset value has its offset ignored in any arithmetical expression _except_ when it is an operand in a subtraction, or is the left hand summand in an addition.
+
+Examples for the different interpretations, writing _x_ ⊕ _y_ for an internal representation of a value with implicit offset _y_:
+
+| Expression      | Simple    | Conservative    | Full contextual |
+|-----------------|-----=-----|-----------------|-----------------|
+| 1 °C            | 274.15 K  | (1 ⊕ 273.15) K  | (1 ⊕ 273.15) K  |
+| 1 °C + 3 K      | 277.15 K  | (4 ⊕ 273.15) K  | (4 ⊕ 273.15) K  |
+| 1 °C - 3 °C     | -2 K      |  -2 K           | -2 K            |
+| 280.15 K + 3 °C | 283.14 K  |  _error_        | 283.15 K        |
+| 280.15 K - 3 °C | -2 K      |  _error_        | -2 K            |
+| 1 °C + 3 °C     | 550.30 K  |  _error_        | (4 ⊕ 273.15) K  |
+| 1 °C / 2        | 137.075 K |  _error_        | 0.5 K           |
+
+All three approaches can lead to surprsing behaviour, given the differences in interprertation between addition and subtraction with offset-bearing quantities. The best approach might be to remove the °C unit altogether.
 
 
 ### Records
