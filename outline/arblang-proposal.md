@@ -272,6 +272,8 @@ Punctuation token definitions:
 
 > ***multiplication-dot*** ::= U+00B7 `·` MIDDLE DOT | U+22C5 `⋅` DOT OPERATOR
 
+> ***asterisk*** ::= `*`
+
 > ***division-slash*** ::= ~ U+002F `/` SOLIDUS | U+2215 `∕` DIVISION SLASH
 
 > ***exponent-op*** ::= `^`
@@ -470,6 +472,32 @@ A _type-expr_ is either `boolean`, a quantity term, a record type description, o
 
 An expression of a given type can be constructed from type literals and constructors described below, as well as from operators acting on subexpressions (see the section _Expressions_).
 
+In definitions of record fields, function arguments, and optionally within expressions a _type-assertion_ declares that the identifier or expression has a given type.
+
+> _type-assertion_ ::= `:` _type-expr_
+
+If the type of an expression bound to an identifier is neither the same as nor a supertype of the type in the assertion, then the binding is ill-formed. Sub- and supertypes constitute a relation between record types, described below.
+
+Examples of type assertions:
+
+```
+# Valid: 3 m has type `length`.
+def a: length = 3 m;
+
+# Valid: 3 m has type `length`.
+def b = 3 m: length;
+
+# Valid: the type `small` is a subtype of `big` and the
+# function `f` has result of type `length`.
+type big = { a: real; b: { x: length; y: length; }; c: mass; };
+type small = { c: mass; b: { x: length; } };
+def f = fn (p: small) → p.b.x + 2 m;
+def g = fn (q: big) → f(q) : length;
+
+# Ill-formed: rhs is not of type `length`
+def c: length = 3;
+```
+
 ### Boolean
 
 The boolean type has two possible values, true and false, and expressions of boolean type are constructed from the boolean literals and comparison expressions.
@@ -490,7 +518,7 @@ A quantity type is defined as a product term of named quantities such as voltage
 >
 > _quantity-quotient_ ::= _quantity-term_ ***division-slash*** _quantity-term_
 >
-> _integer-exponent_ ::= `^` ***numeric-literal*** |  ***superscript-literal***
+> _integer-exponent_ ::= `^` ***minus-sign***? ***numeric-literal*** |  ***superscript-literal***
 >
 > _quantity-name_ ::= `real` | `length` | `mass` | `time` | `current` | `temperature` | `amount` |
 >   `frequency` | `area` | `volume` | `velocity` | `acceleration` | `momentum` | `force` | `pressure` | `power` | `energy` |
@@ -533,9 +561,9 @@ The named quantities above are chosen to represent ISQ quantities, but in some c
 
 For arblang, two quantity type expressions are deemed equivalent if they have the same physical dimensionality. Equivalent type expressions describe the same type.
 
-Quantity literals are composed from a ***numeric-literal*** and a _unit-term_ suffix. Units are represented by keywords corresponding to combinations of SI unit prefixes and SI unit abbreviations, and similarly to quantities, are composed via multiplication, division, and integer exponentiation.
+Quantity literals are composed from a ***numeric-literal*** and an optional _unit-term_ suffix. Units are represented by keywords corresponding to combinations of SI unit prefixes and SI unit abbreviations, and similarly to quantities, are composed via multiplication, division, and integer exponentiation. If no _unit-term_ suffix is present, the quantity is a scalar `real` type (i.e. a quantity of dimension one).
 
-> _quantity-literal_ ::= ***numeric-literal*** ***whitespace*** _unit-term_
+> _quantity-literal_ ::= ***minus-sign***? ***numeric-literal*** ( ***whitespace*** _unit-term_ )?
 >
 > _unit-term_ ::= _unit-name_ _integer-exponent_? | _unit-product_ | _unit-quotient_
 >
@@ -610,6 +638,8 @@ Note that the non-SI unit 'molar' is equal to 1 mol/L.
 
 #### Notes
 
+**TODO**: Put this under expressions below, in subsection _Offset value arithmetic_.
+
 There is one unit, degrees Celsius °C, which is not zero-based. Depending on context, a value expressed as _x_ °C may represent an absolute temperature, viz. (_x_+273.15) kelvin, or a temperature difference of _x_ kelvin. To avoid confusion, it is recommended that any arblang source only use °C to represent the former. For the interpretation of arblang, there are three chief possibilities, in order of increasing sophistication:
 
 1. Simplest: always automatically convert _x_ °C to (_x_+273.15) kelvin. Use of a Celsius temperature literal in non-absolute contexts is an unflagged semantic error.
@@ -633,8 +663,187 @@ All three approaches can lead to surprsing behaviour, given the differences in i
 
 ### Records
 
+A record is a labelled unordered tuple of values which are either quantities or records themselves. A record may not have two fields of the same name. A record type specification has the syntax:
+
+> _record-type-expr_ ::= `{` _field-spec_* `}`
+>
+> _field-spac_ ::= ***symbol*** _type-assertion_ `;`
+>
+> _type-assertion_ ::= `:` _type-expr_
+
+A record type _R_ with fields _fᵢ_ of type _Tᵢ_ is a subtype of a record type _S_ with fields _gⱼ_ of type _Uⱼ_ if for every _i_ there exists a _j_ such that _fᵢ_ and _gⱼ_ have the same identifier and _Tᵢ_ is the same type as or a subtype of _Uⱼ_. If _R_ is a subtype of _S_ and _S_ is a subtype of _R_, then _R_ and _S_ are the same type. Note that the order of fields in a _record-type_ is arbitrary.
+
+Correspondingly, record literals have the syntax:
+
+> _record-literal_ ::= `{` _field-definition_* `}`
+>
+> _field-definition_ ::= ***symbol*** _type-assertion_? `=` _expression_ `;`
+
+For field definitions, if there is no type assertion given, the type of the field is deduced from the expression on the right hand side.
+
+The field names constituting the left hand side of the field definitions have the _record scope_ of the record value. The defining expressions on the right hand side remain in an expression context, so that identifiers with the same symbol as a record field will _not_ refer to that record. For example, in the expression
+
+```
+let a = 3 m;
+let r = { a = 4; b = a; };
+r.b
+```
+
+`r` has type `{ a: real; b: length; }` and is bound to the value `{ a = 4; b = 3 m; }`, because the `a` in the right hand side of `b = a` is in expression context, and so is bound to to the value 3 as given in the outer `let`.
+
+Field values in a record are accessed via a qualified identifier (see above), or by immediate field access (see Record expressions, below), or brought into scope via a `with` binding (see Value bindings, below).
+
+```
+let r = { a = 4; }; r.a   # qualified identifer evalates to value 4
+let x = { a = 4; }.a; x   # immediate field access evalates to value 4
+with { a = 4; }; a        # a is locally bound to the value 4
+```
 
 ### Functions
+
+A function literal gives a value of a function type. Function types have no representation in the arblang source language, and so cannot be used in type assertions, or in function arguments.
+
+> _function-literal_ ::= `fn` `(` ( _function-arg_ ( `,` _function-arg_ )* )? `)` ***right-arrow*** _expression_
+>
+> _funciton-arg_ ::= ***symbol*** _type-assertion_
+
+The identifiers introduced by _function-arg_ clauses have function scope which comprises the final defining expression. These are bound to parameter values in a function call expression (see _Expressions_ below). The final expression may be of any non-function type.
+
+
+## Expressions
+
+The expression syntax below is ambiguous in that, for example, a function application or qualified identifier may be parsed as a _boolean-expr_, _algebraic-expr_, or _record-expr_. Each possible parse should be semantically equivalent.
+
+> _expression_ ::= _expression-base_ _type-assertion_? | `(` _expression_ `)`
+>
+> _expression-base_ ::= _function-literal_ | _value-binding_ | _conditional-expr_ | _boolean-expr_ | _algebraic-expr_ | _record-expr_
+
+Type assertions present another possible ambiguous parse; where ambiguous, type assertions have the highest precedence — see _Precedence_ below. An expression of the form `expr: T` is valid if the type of `expr` is `T` or a supertype of `T`, and ill-formed otherwise. The type of `expr: T`, if well-formed, is always the type `T`.
+
+
+### Value bindings
+
+> _value-binding_ ::= _let-binding_ | _with-binding_
+>
+> _let-binding ::= `let` ***symbol*** _type-assertion_? `=` _expression_ `;` _expression_
+>
+> _with-binding_ ::= `with` _expression_ `;` _expression_
+
+Both `let` and `with` introduce new identifiers in expression context that can mask bindings from outer scopes.
+
+The value of the let expression `let id = expr₁; expr₂` is `expr₂` with `id` bound to `expr₁`.
+
+The value of the where expression `where expr₁; expr₂` is `expr₂` with the bindings `fᵢ = vᵢ` for each field `fᵢ` with value `vᵢ` in the record value of `expr₁`. If `expr₁` does not have record type, the expression is ill-formed.
+
+Example:
+
+```
+let a = { scale = 3.2; pos = { x = 3 m ; y = 4 m; }; };   # binds `a` below.
+with a.pos;   # binds `x` to 3 m and `y` to 4 m below.
+a.scale*(x+y);
+```
+
+As the type of a value binding is the type of its final expression, syntactic ambiguity in type assertion parsing has no semantic consequence: `let id = expr₁; expr₂: T` has the type of `expr₂: T`, which is `T` iff the type of `expr₂` is `T` or a supertype of `T` ; similarly, `(let id = expr₁; expr₂): T` has type `T` iff the type of `let id = expr₁; expr₂`, which is the type of `expr₂` is `T` or a supertype of `T`.
+
+
+### Conditional expressions
+
+> _conditional-expr_ ::= _if-expr_ | _case-expr_
+>
+> _if-expr_ ::= `if` _boolean-expr_ `then` _expression_ `else` _expression_
+>
+> _case-expr_ ::= `|` _boolean-expr_ ***right-arrow*** _expression_ )? _case-expr_ | `|` ( `otherwise` | `true` ) ***right-arrow*** _expression_
+
+Alternatives based on one or more conditions can be expressed with if/then/else clauses or case expressions introduced with the bar symbol. In either, the conditional expression is ill-formed if any of the _boolean-expr_ have type which is not boolean.
+
+The value of `if condition then expr₁ else expr₂` is the value of `expr₁` in the case where `condition` evaluates to true, and `expr₂` otherwise. The type of the _if-expr_ is the type of `expr₁` and `expr₂`; the expression is ill-formed if the types of `expr₁` and `expr₂` differ.
+
+The value of `| otherwise → expr` is just the value of `expr`. `true` can be used in place of `otherwise` equivalently. For a compound _case-expr_ of the form `| condition → expr₁ case₂`, the value is `expr₁` in the case where `condition` is true, and the value of `case₂` otherwise; the expression is ill-formed if the types of `expr₁` and `case₂` differ.
+
+Example:
+
+```
+# Always evaluates to 10 km.
+let a = if 3>2 then 10 m else 2 m; a*1000
+
+# Piece-wise constant reaction rate function.
+def rate = fn (T: temperature) →
+  | T<0 °C → 10 mM/s
+  | T<10 °C → 20 mM/s
+  | otherise → 30 mM/s;
+
+```
+
+As with value bindings, there is no semantic ambiguity arising from an ambiguous parse from a trailing type assertion.
+
+### Boolean expressions
+
+> _boolean-expr_ ::= _boolean-term_ ( `or` _boolean-term_ )*
+>
+> _boolean-term ::= _boolean-factor_ ( `and` _boolean-factor_ )*
+>
+> _boolean-factor_ ::= `not`? ( _comparison-expr_ | _function_application_ | _qualified-identifier_ | _boolean-literal_ | `(` _boolean-expr_ `)` )
+>
+> _comparison-expr_ ::= _comparison-base_ _comparison-op_ _comparison-base_
+>
+> _comparison-op_ ::= ***compare-equal*** | ***compare-not-equal*** | ***compare-less*** | ***compare-less-equal*** | ***compare-greater*** | ***compare-greater-eqaul***
+>
+> _comparison-base_ ::= _algebraic-expr_ | `(` _expression_ `)`
+
+A compound boolean expression of the form `expr₁ or expr₂` is well defined only if the types of `expr₁` and `expr₂` are both boolean. The value is false if both `expr₁` and `expr₂` have value false, and true otherwise. The `or` operation can be considered to be left associative, but the `or` operation is both commutative and associative, and consequently there is no ambiguity resulting in expression evaluation order.
+
+The boolean operator `and` has higher precedence than that of `or`, and `expr₁ and expr₂` has value true iff `expr₁` has value true and `expr₂` has value true. The expression is ill-formed if `expr₁` or `expr₂` do not have type boolean. Similarly to `or`, the operator can be considered to be left-associative, but there is no ambiguity regardless.
+
+`not` has the highest precedence of the boolean operators, and `not expr` has value true iff `expr` has value false. The expression is ill-formed if `expr` does not have type boolean.
+
+A _comparison-expr_ of the form `expr₁ == expr₂` or `expr₁ ≠ expr₂` is well-definied iff `expr₁` and `expr₂` have the same type, with that type being a quantity type, a record type, or boolean. Its value is true if the two expressions have the same boolean or quantity values or if the expressions are of the same record type and `(expr₁).f == (expr₂).f` for each field `f` in this record type, and is otherwise false. `expr₁ ≠ expr₂`, if well-defined, is true iff `expr₁ == expr₂` is false.
+
+A _comparison-expr_ of the form `expr₁ op expr₂` where `op` is not `==` nor `≠` is well-defined iff `expr₁` and `expr₂` have the same quantity type.  The comparison operators `≥`, `>`, `≤`, `<` evaluate in accordance with the usual order on real values, after applying any requisite scaling to equate units.
+
+When a _comparison-expr_ `expr₁ op expr₂` compares two terms of the same quantity type which may carray an offset value from a non-zero based unit, the value is equivalent to `expr₁ - expr₂ op zero` where `zero` is a zero-valued quantity of the same type as `expr₁`. See _Offset value arithemtic_ below.
+
+A _boolean-expr_ may not involve any boolean or comparison operations, and be equivalently parsed as an algebraic expression. In this instance, its type and value is the same as if it were parsed directly as an algebraic expression.
+
+
+### Algebraic expressions
+
+> _algebraic-expr_ ::= _algebraic-term_ ( ( ***plus-sign*** | ***minus-sign*** ) _algebraic-term_ )*
+>
+> _algebraic-term_ ::= _algebraic-factor_ ( ( ***multiplication-dot*** | ***asterisk*** | ***division-slash*** ) _algebraic-factor_ )*
+>
+> _algebraic-factor ::= _quantity-literal_ | ( ***minus-sign***? ( _function-application_ | _qualified-identifer_ | _record-field-expr_ | ***numeric-literal*** | `(` _expression_ `)` ) _exponent_ )
+>
+> _exponent_ ::= ***superscript-literal*** | ( `^` _algebraic-factor_ )*
+
+Additive operators `+` and `-` and multiplicative operators `*` (or `·`) and `/` are all left associative. Multiplicative operators have higher precedence than additive operators.
+
+An additive expression of the form `expr₁ + expr₂` or `expr₁ - expr₂` is well defined iff `expr₁` and `expr₂` have the same quantity type. The expresison has the same quantity type, with the value corresponding to the regular arithmetic operation after any requisite scaling to equalize units. For values that may carray an offset from a non-zero based unit, refer to _Offset value arithmetic_ below.
+
+> _function-application_ ::= ( _qualified-identifier_ | `(` _function-literal_ `)` ) `(` ( _expression_ ( `,` _expression_ )* )? `)`
+
+A _function-application_ expression is well-formed iff the function type of the _function-literal_ or the function value bound to _qualified-identifier_ is compatible with the number and types of the _expression_ clauses constituting the arguments. If the function value correspnds to the form `fn (a₁: T₁, …) → result`, then the value of the function application expression with arguments `expr₁`, … is the value of the expression `let a₁: T₁ = expr₁; … result`.
+
+### Record expressions
+
+> _record-expr_ ::= _record-term_ ( ***preferential-union*** _record-term_ )*
+>
+> _record-term_ ::= _record-literal_ | _function-application_ | _qualified_identifier_ | _record-literal_ | `(` _record-expr_ `)`
+>
+> _record-field-expr_ ::= ( _record-literal_ | _function-application_ | `(` _record-expr_ `)` ) `.` _qualified-identifier_
+
+**TODO** Elaborate on scope, etc. + 'preferential union' (add the operator to the lexical grammar too).
+
+### Precedence
+
+**TODO**
+
+### Offset value arithmetic
+
+**TODO** Grab and rewrite comments above re: degrees Celsius.
+
+### Evaluation of expressions
+
+**TODO** Clarify what is meant by this! I.e. difference between mathematical terms and their interpretatoin by the compiler/interpreter.
 
 
 ## Modules and interfaces
@@ -737,6 +946,8 @@ interface point "foo" {
 Models using the "foo" mechanism can set the parameter `a` to some voltage. If it remains unset, the mechanism supplies a non-specific current of 0.5 μA; if the model sets the parameter `a` to -7 mV, the parameter `I` in the `impl` module will have the value 1.0 µA, which will in turn be the supplied non-specific current.
 
 # Refactor from here
+
+**TODO**
 
 Types, records and expressions are described below.
 
@@ -894,378 +1105,6 @@ interface concentration "CaBuffered" {
     effect internal concentration rate "ca" = -(ca_conc-steady_conc)/decay;
 }
 ```
-
-## Function definitions
-
-**TODO**
-
-# Types and type expressions
-
-Every expression has a type, which is either:
-
-1. A boolean value.
-2. A quantity (see below).
-3. A record type, comprising an unordered sequence of named fields, with each field being either a quantity or another record type.
-
-Type descriptions are explicitly required in:
-
-1. Record field type declarations.
-2. Function parameter declarations.
-
-Type descriptions are optional in contexts where the type can be deduced:
-
-1. In `bind` and `parameter` declarations.
-2. In `let` and `with` expressions.
-3. In function return value type declarations.
-
-A type expression &lt;type-expr&gt; describes a type; different type expressions may describe the same type.
-
-| &lt;type-expr&gt; ::= `boolean` | &lt;quantity-expr&gt; | &lt;record-type-expr&gt;
-
-## Quantities
-
-Quantities represent physical quantities, which in turn comprise a magnitude and a physical dimension. The specific unit scale underlying the representation of a physical quantity is implicit.
-
-A quantity type is defined as a product term of named quantities such as voltage, time, resistance, etc. The set of named quantities is predefined, and can't be extended within arblang. Quantity syntax:
-
-> &lt;quantity-expr&gt; ::= &lt;quantity-name&gt; | &lt;quantity-product&gt; | &lt;quantity-quotient&gt; | &lt;quantity-power&gt;
->
-> &lt;quantity-product&gt; ::= &lt;quantity-expr&gt; &lt;product-symbol&gt; &lt;quantity-expr&gt;
->
-> &lt;product-symbol&gt; ::= &lt;whitespace&gt; | &lt;multiplication-dot&gt;
->
-> &lt;quantity-quotient&gt; ::= &lt;quantity-term&gt; &lt;division-slash&gt; &lt;quantity-term&gt;
->
-> &lt;quantity-power&gt; ::= &lt;quantity&gt; `^` &lt;integer&gt; | &lt;quantity&gt; &lt;integer-superscript&gt;
->
-> &lt;integer&gt; ::= [&lt;minus-sign&gt;] &lt;digit&gt;+
->
-> &lt;digit&gt; ::= `0` | `1` | ... | `9`
->
-> &lt;integer-superscript&gt; ::= [ `⁻` ] &lt;digit-superscript&gt;+
->
-> &lt;digit-superscript&gt; ::= `⁰` | `¹` | ,,, | `⁹`
->
-> &lt;quantity-name&gt; ::= `real` | `length` | `mass` | `time` | `current` | `amount` |
->   `temperature` | `charge` | `frequency` | `voltage` | `resistance` |
->   `capacitance` | `force` | `energy` | `power` | `area` | `volume` | `concentration`
-
-Here, 'real' denotes the dimensionsless (scalar) quantity.
-
-The named quantities above are chosen to represent ISQ quantities, but in some
-cases a single word is used to represent a longer ISQ quantity name to simplify
-the grammar. These map to ISQ quantities as follows:
-
-`amount`
-  ~ amount of substance
-
-`current`
-  ~ electic current
-
-`time`
-  ~ time duration
-
-`temperature`
-  ~ thermodynamic temperature
-
-`charge`
-  ~ electric charge
-
-`resistance`
-  ~ electric resistance
-
-`voltage`
-  ~ electric potential difference
-
-Examples:
-
-```
-let real a = 2.0;
-let voltage v = 2 mV;
-let current/area/time g' = 1 nA/mm²/ms; # a time derivative of areal current density.
-let capacitance⋅length⁻² c = 2 F/cm²; # a contrived way of writing capacitance/area
-```
-
-Unlike ISQ quantities, there is one quantity type provided per dimensionally-equivalent class, where 'amount' is considered as its own dimension, distinct from dimensionless quantities. This means, for example, that there is no type support for preventing a concentration of Na⁺ being used in a context expecting a concentration of Ca⁺⁺, or for distinguishing between 'catalytic activity' and 'amount of substance per time', or even between plane and solid angles.
-
-Expressions which evaluate to a given quantity follow normal algebraic rules; constant values must be introduced with a compatible unit.
-
-```
-let voltage v = 23 * 10 mV - 2 μV;
-```
-
-**Note:** Luminous intensity is excluded above, but perhaps we should include it for completeness.
-
-## Record types
-
-A record is a labelled unordered tuple of values which are either quantities or records themselves. A record may not have two fields of the same name. A record type specification has the syntax:
-
-> &lt;record-type-expr&gt; ::= &lt;record-type&gt; | &lt;record-alias&gt; | &lt;derivative-record&gt;
->
-> &lt;record-alias&gt; ::= &lt;identifier&gt;
->
-> &lt;record-type&gt; ::= `record` &lt;record-type-body&gt;
->
-> &lt;record-type-body&gt; ::= `{` &lt;record-field&gt;* `}`
->
-> &lt;record-field&gt; ::= &lt;type-expr&gt; &lt;identifier&gt; `;`
-
-A record alias is an identifier that has bound to a record type in a record alias definition (see above).
-
-### Record type aliases and derivative records.
-
-See the Modules and Interfaces section for the definition syntax.
-
-When an identifier _x_ is bound as a record alias, then the symbols _x_', _x_'', etc. are also bound as record aliases. The alias _x_' is bound to the _time derivative_ record type of _x_.
-
-If a record type has fields named F<sub>1</sub>, F<sub>2</sub>, … with types T<sub>1</sub>, T<sub>2</sub>, … then its time derivative record has fields named F<sub>1</sub>', F<sub>2</sub>', … and types T<sub>1</sub>', T<sub>2</sub>', … where T' is the time derivative record of T if T is a record, or else is the quantity T/time if T is a quantity.
-
-Example: with the record aliases
-```
-    record foo { real a; length b; }
-    record bar { amount c; foo d; }
-```
-the type `bar'` is equivalent to the definition
-```
-    record bar' {
-        amount/time c';
-        record { frequency a'; length/time b'; } d';
-    }
-```
-
-### Row polymorphism
-
-A record type is a _subrecord_ of another type for every field _F_ in the first record type is also a field _G_ in the second record type with the same field name, and the type of _F_ is either the same as the type of _G_ or is a subrecord of the type of _G_.
-
-**TODO:** a record supertype can be bound to a parameter or identifier with a specified record subtype.
-
-# Expressions
-
-An expression corresponds to something that can be evaluated to give a value. They can be a literal value, or some
-combination of literal values, bound identifiers, arithemetic and record operations, function invocations, local bindings, and comparisons.
-
-> &lt;expression&gt; = &lt;value-literal&gt; | `(` &lt;expression;&gt; `)` | &lt;function-call&gt; | &lt;arithemtic-expr&gt; | &lt;record-expr&gt; | &lt;boolean-expr&gt; | &lt;conditional-expr&gt; | &lt;let-expr&gt; | &lt;with-expr&gt;
-
-## Literal values
-
-A literal scalar value is just a decimal representation of a real number,
-while a non-scalar literal value is written as a decimal number followed by a unit
-description. The unit descriptions follow a grammar analagous to the quantity
-descriptions (see above).
-
-> &lt;value-literal&gt; ::= &lt;number&gt; | &lt;number&gt; &lt;whitespace&gt; &lt;unit-term&gt;
->
-> &lt;unit-term&gt; ::= &lt;unit&gt; | &lt;unit-product&gt; | &lt;unit-quotient&gt; | &lt;unit-power&gt;
->
-> &lt;unit-product&gt; ::= &lt;unit-term&gt; &lt;multiplication-dot&gt; &lt;unit-term&gt; | &lt;unit-term&gt; &lt;whitespace&gt; &lt;unit-term&gt;
->
-> &lt;unit-quotient&gt; ::= &lt;unit-term&gt; &lt;division-slash&gt; &lt;unit-term&gt;
->
-> &lt;unit-power&gt; ::= &lt;unit-term&gt; `^` &lt;integer&gt; | &lt;unit-term&gt; &lt;integer-superscript&gt;
->
-> &lt;unit&gt; ::= [ &lt;si-prefix-symbol&gt; ] &lt;si-unit-symbol&gt; | &lt;convenience-unit&gt;
->
-> &lt;si-prefix-symbol&gt; ::= `Y` | `Z` | `E` | `P` | `T` | `G` | `M` | `k` | `h` | `da` | `d` | `c` | `m` |
->    `μ` | `µ` | `u` | `n` | `p` | `f` | `a` | `z` | `y`
->
-> &lt;si-unit-symbol&gt; ::= `s` | `m` | `g` | `A` | `K` | `mol` | `L` | `l` | `Hz` | `N` | `J` | `Pa` | `W` | `C` | `F` | `V` | `Ω` | `S` | `kat` | ...
->
-> &lt;convienience-unit&gt; ::= `°C` | `°F` | ...
-
-(Where &lt;number&gt; stands for the regular sorts of decimal representation supported by e.g. JSON.)
-
-Note that `*` is _not_ permitted as a product symbol between units in this proposal. This is in accordance with SI typographical conventions and reduces the risk of misinterpretation where a literal value is used in a term together with an identifier which has the same spelling as an SI unit, e.g.
-
-> 1 cm*cm
-
-would unambiguously mean the product of one centimetre with the value 'cm'. There still remains the problem of e.g.
-
-> 1 cm/cm
-
-which would, if unit terms are given precedence, denote one centimetre per centimetre. As parantheses are also not permitted in unit terms as proposed above, the quotient of one centimetre and the value 'cm' could be denoted by
-
-> 1 cm / cm # Space or lack thereof is significant in unit terms.
-> 1 cm/(cm) # Parentheses can't be part of a unit term.
-
-or with maximum clarity, by
-
-> (1 cm)/cm
-
-The type of a literal value is the quantity that is dimensionaly compatible with the given unit.
-
-## Boolean expressions and conditionals
-
-Boolean expressions are those expressions that evalue to a boolean value. They comprise the boolean literals `true` and `false`, and comparisons.
-
-> &lt;boolean-expr&gt; ::= `true` | `false` | &lt;expression&gt; &lt;comparison-op&gt; &lt;expression&gt; | &lt;expression&gt; &lt;logical-op&gt; &lt;expression&gt;
->
-> &lt;comparison-op&gt; ::= `<` | `<=` | `>` | `>=` | `==` | `!=`
->
-> &lt;logical-op&gt; ::= `not` | `and` | `or`
-
-Conditional expressions evaluate to one of two sub-expressions based on a boolean value.
-
-> &lt;conditional-expr&gt; ::= `if` &lt;expression&gt; `;` `then` &lt;expression&gt; `else` &lt;expression&gt;
-
-### Alternative conditional syntax
-
-In order to avoid nested `if` expressions, we could also or instead adopt a guard-style syntax. The last clause must have condition `true`, or as syntactic sugar, `otherwise`.
-
-**TODO:** Syntax definition.
-
-Example:
-```
-let q =
-  | a==3 => 1
-  | otherwise => sin(a)/a;
-```
-
-### Semantics
-
-Comparisons can only be performed between quality values of the same type, or between records that are of the same type, or where one is a subrecord of the other. For record comparisons, the expression evaluates to true if the comparison holds true for each field in the subrecord.
-
-Logical operations are only defined for boolean values.
-
-## Arithmetic expressions
-
-Arithmetic operations — multiplication, division, addition and subtraction —
-can be used to form expressions involving values provided that there is
-an agreement in quantity. Exponentiation of scalar values is freely permitted,
-but exponentiation of non-scalar values is only defined under particular
-circumstances.
-
-**TODO**: All the details.
-
-## Record expressions
-
-A record values can be specified by the field values in a record construction:
-
-> &lt;record-construction&gt; ::= `{` &lt;record-field-binding&gt;* `}`
->
-> &lt;record-field-binding&gt; ::= [ &lt;type-expr&gt; ] &lt;identifier&gt; `=` &lt;field-value&gt; `;`
->
-> &lt;field-value&gt; ::= &lt;expression&gt;
-
-As an example, the following expression has the type `record { voltage a; real b; }`
-```
-{ real b = 2; a = 3 mV; }
-```
-where the type of the field `a` is deduced from the rhs of the binding.
-
-Record values support two operations: field access, and update.
-
-> &lt;record-expr&gt; ::= &lt;field-expr&gt; | &lt;update-expr&gt;
->
-> &lt;field-expr&gt; ::= &lt;expression&gt; `.` &lt;identifier&gt;
->
-> &lt;update-expr&gt; ::= &lt;expression&gt; `:` &lt;expression&gt;
-
-The update operation `:` takes two record values, with the rhs a subrecord of the lhs, and returns a record of the same type as the lhs. Each field has the value taken from the rhs if present in the subrecord type, or otherwise the value taken from the lhs.
-
-In the following example,
-```
-let p = { a = 3.0; b = 10 A; };
-let q = p : { b = 20 A; };
-```
-the identifier `q` is bound to the record value `{ a = 3.0; b = 20 A; }`.
-
-## Local binding expressions
-
-`let` and `with` bind identifiers to expressions or record fields. `with` could also possibly be used to bring into scope identifiers defined in an imported module.
-
-> &lt;let-expr&gt; ::= `let` [&lt;type-expr&gt;] &lt;identifier&gt; = &lt;expression&gt; `;` &lt;expression&gt;
-> &lt;with-expr&gt; ::= `with` [&lt;type-expr&gt;] &lt;expression&gt; `;` &lt;expression&gt;
-
-The identifiers introduced by `let` or `with` have only the terminal expression as scope.
-
-**TODO:** Examples!
-
-# Syntax discussion and alternatives
-
-## Semicolons
-
-The proposal above requires semicolons only in three circumstances: when associating or binding something after an equals sign; when making local bindings in a with-expression; after a conditional in a when-clause; or when declaring fields in a record type:
-```
-# Semicolons after `=` and expression:
-parameter length² A = 3 m²;
-bind S = state;
-effect current "na" = 3 mA;
-let real a = S.a; 3+a
-
-# Semicolon after first expression in `with`:
-with S; 3+a
-
-# Semicolon after field definition in record type,
-# as well as in record value fields.
-let record { concentration x; } b = { x = 3; }; 3+b.x
-
-# No semicolon after record type alias.
-record foo { real x; }
-
-# Or after function definition.
-function bar () { 3 }
-
-# Or after a paramater alias,
-density parameter ca2_dynamics.foo as foo
-
-# OR after import, etc.
-import std as foobar
-
-```
-
-Why have semicolons at all? It can disambiguate alternative possible parses when two expressions are adjacent, which is a situation that arises from allowing whitespace to act as a product in quantity and unit expressions:
-```
-let A = 3 A A - 4 A
-```
-could be interpreted as binding `A` to the value 3 square amperes and returning negative four amperes, or binding `A` to the value 3 amperes, and then returning `A` minus four amperes, giving negative one ampere. The semicolon resolves this one way or the other:
-```
-let A = 3 A; A - 4 A
-```
-
-Why not have semicolons more commonly? It's certainly possible: they could be added after every `import` or record alias or function definition, but it is not necessary for the resolution of ambiguities. An alternate function and alias syntax described below could help unify some of these syntaxes.
-
-
-## Function alternatives and type aliases
-
-As presented above, functions are fairly inflexible: they can only be defined in module/interface scope, and they are not permitted to be polymorphic.
-
-Functions could be allowed to be defined locally with a syntax like e.g.
-```
-function five() {
-    let f = function (real a, real b) { a+b };
-    f(3, 2)
-}
-```
-in which case a uniform definition syntax might replace `function _name_ (params...) ...`, e.g.
-```
-def five = function () {
-    let f = function (real a, real b) { a+b };
-    f(3, 2)
-};
-```
-And rather than be so verbose, we could use something like `fn` instead.
-
-A problem with this is that it makes functions look like values, and values should be things you can return from functions, etc., and suddenly for consistency it looks like we might want to support functions as first class objects. This would increase expressiveness, but would also make the type system more complicated. For the domain, this is probably not an expressiveness we need.
-
-However, we could make a distinction between binding local identifiers with `let` and introducing new function or record aliases with e.g. `def`. Then the example would become
-```
-def five = fn () {
-    def f = fn (real a, real b) { a+b };   # 'f' is _not_ a value!
-    f(3, 2)
-};
-```
-and this would allow a general approach to function aliases, type naming, and derivative type forms:
-```
-def model_state = record { real a; concentration b; }; # record alias
-
-def ca_model = concentration; # quantity alias
-def ca_rate = fn (ca_model conc) -> ca_model' { conc/20 ms }; # ca_model' automatically defined as concentration/time
-
-import std
-def nernst = std.nernst; # 'nernst' is another name for the 'std.nernst' function.
-```
-
-If `def foo = fn (...) { ... };` looks a little verbose, we could keep `def foo(...) { ... }` as syntactic sugar.
 
 ## Magic keywords and extension points
 
