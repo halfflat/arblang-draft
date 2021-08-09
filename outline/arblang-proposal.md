@@ -640,28 +640,30 @@ Note that the non-SI unit 'molar' is equal to 1 mol/L.
 
 #### Notes
 
-**TODO**: Put this under expressions below, in subsection _Offset value arithmetic_.
+*TODO* Actually, just toss °C and rewrite below as proposed extension.
 
-There is one unit, degrees Celsius °C, which is not zero-based. Depending on context, a value expressed as _x_ °C may represent an absolute temperature, viz. (_x_+273.15) kelvin, or a temperature difference of _x_ kelvin. To avoid confusion, it is recommended that any arblang source only use °C to represent the former. For the interpretation of arblang, there are three chief possibilities, in order of increasing sophistication:
-
-1. Simplest: always automatically convert _x_ °C to (_x_+273.15) kelvin. Use of a Celsius temperature literal in non-absolute contexts is an unflagged semantic error.
-2. Conservative contextual approach: subtraction is always regarded as representing a difference, so that two compatible offset or offset-free values may be subtracted, giving an offset-free value; an offset value may be the left hand summand in an addition with a compatible non-offset value, giving an offset value. All other arithmetical expressions constitute a type error.
-3. Fully contextual approach: as above, save that an offset value has its offset ignored in any arithmetical expression _except_ when it is an operand in a subtraction, or is the left hand summand in an addition.
-
-Examples for the different interpretations, writing _x_ ⊕ _y_ for an internal representation of a value with implicit offset _y_:
-
-| Expression      | Simple    | Conservative    | Full contextual |
-|-----------------|-----=-----|-----------------|-----------------|
-| 1 °C            | 274.15 K  | (1 ⊕ 273.15) K  | (1 ⊕ 273.15) K  |
-| 1 °C + 3 K      | 277.15 K  | (4 ⊕ 273.15) K  | (4 ⊕ 273.15) K  |
-| 1 °C - 3 °C     | -2 K      |  -2 K           | -2 K            |
-| 280.15 K + 3 °C | 283.14 K  |  _error_        | 283.15 K        |
-| 280.15 K - 3 °C | -2 K      |  _error_        | -2 K            |
-| 1 °C + 3 °C     | 550.30 K  |  _error_        | (4 ⊕ 273.15) K  |
-| 1 °C / 2        | 137.075 K |  _error_        | 0.5 K           |
-
-All three approaches can lead to surprsing behaviour, given the differences in interprertation between addition and subtraction with offset-bearing quantities. The best approach might be to remove the °C unit altogether.
-
+| **TODO**: Put this under expressions below, in subsection _Offset value arithmetic_.
+| 
+| There is one unit, degrees Celsius °C, which is not zero-based. Depending on context, a value expressed as _x_ °C may represent an absolute temperature, viz. (_x_+273.15) kelvin, or a temperature difference of _x_ kelvin. To avoid confusion, it is recommended that any arblang source only use °C to represent the former. For the interpretation of arblang, there are three chief possibilities, in order of increasing sophistication:
+| 
+| 1. Simplest: always automatically convert _x_ °C to (_x_+273.15) kelvin. Use of a Celsius temperature literal in non-absolute contexts is an unflagged semantic error.
+| 2. Conservative contextual approach: subtraction is always regarded as representing a difference, so that two compatible offset or offset-free values may be subtracted, giving an offset-free value; an offset value may be the left hand summand in an addition with a compatible non-offset value, giving an offset value. All other arithmetical expressions constitute a type error.
+| 3. Fully contextual approach: as above, save that an offset value has its offset ignored in any arithmetical expression _except_ when it is an operand in a subtraction, or is the left hand summand in an addition.
+| 
+| Examples for the different interpretations, writing _x_ ⊕ _y_ for an internal representation of a value with implicit offset _y_:
+| 
+| | Expression      | Simple    | Conservative    | Full contextual |
+| |-----------------|-----=-----|-----------------|-----------------|
+| | 1 °C            | 274.15 K  | (1 ⊕ 273.15) K  | (1 ⊕ 273.15) K  |
+| | 1 °C + 3 K      | 277.15 K  | (4 ⊕ 273.15) K  | (4 ⊕ 273.15) K  |
+| | 1 °C - 3 °C     | -2 K      |  -2 K           | -2 K            |
+| | 280.15 K + 3 °C | 283.14 K  |  _error_        | 283.15 K        |
+| | 280.15 K - 3 °C | -2 K      |  _error_        | -2 K            |
+| | 1 °C + 3 °C     | 550.30 K  |  _error_        | (4 ⊕ 273.15) K  |
+| | 1 °C / 2        | 137.075 K |  _error_        | 0.5 K           |
+| 
+| All three approaches can lead to surprsing behaviour, given the differences in interprertation between addition and subtraction with offset-bearing quantities. The best approach might be to remove the °C unit altogether.
+| 
 
 ### Records
 
