@@ -258,7 +258,7 @@ The value of a ***string-literal*** token does _not_ undergo NFKC normalization,
 ### Punctuation
 
 > _punctuation_ ::=
->     ***plus-sign*** | ***minus-sign*** | ***multiplication-dot*** | ***division-slash*** | ***exponent-op*** |
+>     ***plus-sign*** | ***minus-sign*** | ***multiplication-dot*** | ***division-slash*** | ***exponent-op*** | ***preferential-union*** |
 >     ***compare-equal*** | ***compare-not-equal*** | ***compare-less*** | ***compare-less-eqaul*** | ***compare-greater*** | ***compare-greater-eqaul*** |
 >     ***left-arrow*** | ***right-arrow*** | ***right-left-arrow*** |
 >     ***assign-equal*** | ***semicolon*** | ***left-paren*** | ***right-paren*** | ***left-brace*** | ***right-brace*** |
@@ -274,9 +274,11 @@ Punctuation token definitions:
 
 > ***asterisk*** ::= `*`
 
-> ***division-slash*** ::= ~ U+002F `/` SOLIDUS | U+2215 `∕` DIVISION SLASH
+> ***division-slash*** ::= U+002F `/` SOLIDUS | U+2215 `∕` DIVISION SLASH
 
 > ***exponent-op*** ::= `^`
+
+> ***preferential-union*** ::= `&` | U+2294 `⊔` SQUARE CAP
 
 > ***compare-equal*** ::= `==`
 
@@ -476,7 +478,7 @@ In definitions of record fields, function arguments, and optionally within expre
 
 > _type-assertion_ ::= `:` _type-expr_
 
-If the type of an expression bound to an identifier is neither the same as nor a supertype of the type in the assertion, then the binding is ill-formed. Sub- and supertypes constitute a relation between record types, described below.
+If the type of an expression bound to an identifier is neither the same as nor a subtype of the type in the assertion, then the binding is ill-formed. Sub- and supertypes constitute a relation between record types, described below.
 
 Examples of type assertions:
 
@@ -487,7 +489,7 @@ def a: length = 3 m;
 # Valid: 3 m has type `length`.
 def b = 3 m: length;
 
-# Valid: the type `small` is a subtype of `big` and the
+# Valid: the type `small` is a supertype of `big` and the
 # function `f` has result of type `length`.
 type big = { a: real; b: { x: length; y: length; }; c: mass; };
 type small = { c: mass; b: { x: length; } };
@@ -671,7 +673,7 @@ A record is a labelled unordered tuple of values which are either quantities or 
 >
 > _type-assertion_ ::= `:` _type-expr_
 
-A record type _R_ with fields _fᵢ_ of type _Tᵢ_ is a subtype of a record type _S_ with fields _gⱼ_ of type _Uⱼ_ if for every _i_ there exists a _j_ such that _fᵢ_ and _gⱼ_ have the same identifier and _Tᵢ_ is the same type as or a subtype of _Uⱼ_. If _R_ is a subtype of _S_ and _S_ is a subtype of _R_, then _R_ and _S_ are the same type. Note that the order of fields in a _record-type_ is arbitrary.
+A record type _R_ with fields _fᵢ_ of type _Tᵢ_ is a supertype of a record type _S_ with fields _gⱼ_ of type _Uⱼ_ if for every _i_ there exists a _j_ such that _fᵢ_ and _gⱼ_ have the same identifier and _Tᵢ_ is the same type as or a supertype of _Uⱼ_. If _R_ is a supertype of _S_ and _S_ is a supertype of _R_, then _R_ and _S_ are the same type. Note that the order of fields in a _record-type_ is arbitrary.
 
 Correspondingly, record literals have the syntax:
 
@@ -698,6 +700,10 @@ let r = { a = 4; }; r.a   # qualified identifer evalates to value 4
 let x = { a = 4; }.a; x   # immediate field access evalates to value 4
 with { a = 4; }; a        # a is locally bound to the value 4
 ```
+
+#### Notes
+
+The sub-/supertype relationships could be extended to support quantities with a restricted range, exposed in the syntax by an extension of the _type-assertion_ syntax. For example, the simplest sort of contrainst, that a value be within some fixed interval, could be represented by syntax such as `a: (-10 m, ∞ m) length`.
 
 ### Functions
 
@@ -831,7 +837,9 @@ A _function-application_ expression is well-formed iff the function type of the 
 >
 > _record-field-expr_ ::= ( _record-literal_ | _function-application_ | `(` _record-expr_ `)` ) `.` _qualified-identifier_
 
-**TODO** Elaborate on scope, etc. + 'preferential union' (add the operator to the lexical grammar too).
+Access to a field in a record that is bound to an identifier can be made via the corresponding qualified identifier (see section _Qualified Identifiers_); for records that are not bound to an identifier, the _record-field-expr_ provides the same function, also using the period as an field access operator.
+
+Records of different types can be combined with the ***preferential-union*** operator: given a record _r_ with fields _fᵢ_ and values _vᵢ_ for _i_∈_I_, and another record _s_ with fields _gⱼ_ and values _wⱼ_ for _j_∈_J_, the expression _r_ ⊔ _s_ is a record with a set of fields {_fᵢ_}∪{_gⱼ_}, and the value of a field _h_ in this record is _vᵢ_ if there exists a field _fᵢ_=_h_, else _wⱼ_ for the field _wⱼ_=_h_. Essentially, the record comprises all the fields of the left hand side, together with any fields from the record on the right hand side which don't have the same name as a field in the first record.
 
 ### Precedence
 
