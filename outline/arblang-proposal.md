@@ -726,11 +726,11 @@ A reaction may be a _right-reaction_, a _left-reaction_, or a _right-left-reacti
 
 #### Converting reaction clauses to field definitions
 
-In a record literal, each species _a_ present in any reaction clause complex will generate a field definition for the field named _a'_. The identifier _α_ will represent a species concentration, and _α'_ its rate of change.
+In a record literal, each species _a_ present in any reaction clause complex will generate a field definition for the field named _a'_. The identifier _a_ will represent a species concentration, and _α'_ its rate of change.
 
 Consider the normalized representation of the set of reaction clauses, where each is represented by one or two right reactions of the form _Lᵢ → Rᵢ (κᵢ)_, where are _Lᵢ_ and _Rᵢ_ are complex. Let Π*C* denote the product with multiplicity of the species terms in a complex *C*, and *μ*(*α*; *C*) the multiplicity of a species _α_ in _C_.
 
-The expression assigned to _α'_ in its field definition is the sum of terms _κᵢ_·Π*Lᵢ*·(*μ*(*α*;*Rᵢ*)-*μ*(*α*;*Lᵢ*)) for each reaction i.
+The expression assigned to _α'_ in its field definition is the sum of terms _κᵢ_·Π*Lᵢ*·(*μ*(*α*; *Rᵢ*) - *μ*(*α*; *Lᵢ*)) for each reaction i.
 
 Example: consider the reaction system below involving three species _a_, _b_ and _c_, represented by their concentrations, coupled via a reaction rate to a quantity _x_ that is governed also by a simple ODE.
 
@@ -780,7 +780,7 @@ An expression of the form `expr: T` is valid if the type of `expr` is `T` or a s
 
 > _value-binding_ ::= _let-binding_ | _with-binding_
 >
-> _let-binding ::= `let` ***symbol*** ( _type-assertion_? `=` _expression_ | `=` _function-literal_ ) `;` _expression_
+> _let-binding_ ::= `let` ***symbol*** ( _type-assertion_? `=` _expression_ | `=` _function-literal_ ) `;` _expression_
 >
 > _with-binding_ ::= `with` _expression_ `;` _expression_
 
@@ -824,9 +824,9 @@ let a = if 3>2 then 10 m else 2 m; a*1000
 
 # Piece-wise constant reaction rate function.
 def rate = fn (T: temperature) →
-  | T<0 °C → 10 mM/s
-  | T<10 °C → 20 mM/s
-  | otherise → 30 mM/s;
+  | T <  0 °C → 10 mM/s
+  | T < 10 °C → 20 mM/s
+  | otherwise → 30 mM/s;
 
 ```
 
@@ -838,7 +838,7 @@ As with value bindings, there is no semantic ambiguity arising from an ambiguous
 
 > _boolean-expr_ ::= _boolean-term_ ( `or` _boolean-term_ )*
 >
-> _boolean-term ::= _boolean-factor_ ( `and` _boolean-factor_ )*
+> _boolean-term_ ::= _boolean-factor_ ( `and` _boolean-factor_ )*
 >
 > _boolean-factor_ ::= `not`? ( _comparison-expr_ | _function_application_ | _qualified-identifier_ | _boolean-literal_ | `(` _boolean-expr_ `)` )
 >
@@ -870,7 +870,7 @@ A _boolean-expr_ may not involve any boolean or comparison operations, and be eq
 >
 > _algebraic-term_ ::= _algebraic-factor_ ( ( ***multiplication-dot*** | ***asterisk*** | ***division-slash*** ) _algebraic-factor_ )*
 >
-> _algebraic-factor ::= _quantity-literal_ | ( ***minus-sign***? ( _function-application_ | _qualified-identifer_ | _record-field-expr_ | ***numeric-literal*** | `(` _expression_ `)` ) _algebraic-exponent_ )
+> _algebraic-factor_ ::= _quantity-literal_ | ( ***minus-sign***? ( _function-application_ | _qualified-identifer_ | _record-field-expr_ | ***numeric-literal*** | `(` _expression_ `)` ) _algebraic-exponent_ )
 >
 > _algebraic-exponent_ ::= ***superscript-literal*** | ( `^` _algebraic-factor_ )*
 
@@ -904,12 +904,12 @@ Where this is ambiguity in expression parsing, operators should be considered in
 
 | Operator                   | Description              | Associativity | Notes |
 |----------------------------|--------------------------|---------------|-|
-| _x_._y_                    | Record field             | left          | |
+| _x_`.`_y_                    | Record field             | left          | |
 | _f_`(`…`)`                 | Function application     | left          | [1](#precedence-note-1) |
 | _x_`^`_y_, _xʲ_            | Exponentiation           | right         | [2](#precedence-note-2) |
 | `-`                        | Unary minus              | right         | [3](#precedence-note-3) |
-| _x_·_y_, _x_/_y_           | Product, quotient        | left          | |
-| _x_+_y_, _x_-_y_           | Sum, difference          | left          | |
+| _x_`·`_y_, _x_`/`_y_           | Product, quotient        | left          | |
+| _x_`+`_y_, _x_`-`_y_           | Sum, difference          | left          | |
 | `⊔`                        | Preferential union       | left          | |
 | `<`, `≤`, `>`, `≥`         | Order comparitsons       | left          | |
 | `==`, `≠`                  | Compare equal, not equal | left          | |
