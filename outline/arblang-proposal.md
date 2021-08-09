@@ -7,9 +7,8 @@ The arblang language is constrained so that every evolution and effect can be in
 Arblang nonetheless can also be interpreted in a purely numerical fashion in other contexts.
 
 
-<a id="mechanism-semantics"/>
-<a id="mechanism-semantics"/>
 # Mechanism semantics
+<a id="mechanism-semantics"/>
 
 A mechanism can be one of a number of different _classes_ of mechanism, where each class determines the sort of cell interactions that the mechanism performs. The classes are pre-defined, but are open ended, in that further extensions to Arbor may admit new mechanism classes. The basic set of classes are described as follows:
 
@@ -22,8 +21,8 @@ A mechanism can be one of a number of different _classes_ of mechanism, where ea
 Each of these mechanisms can have a _state_ comprising zero or more named values that vary over time. Each mechanism definition will provide the initial values for this state, and define their evolution by an explicit system of ODEs.
 
 
-<a id="external-bindings"/>
 ## External bindings
+<a id="external-bindings"/>
 
 The definition of a mechanism allows for names to be bound to the mechanism state and various cellular quantities so that they can play a role in defining the evolution and effects of the mechanism.
 
@@ -46,8 +45,8 @@ The list of possible cellular quantities is open to future extension, but initia
 Not every mechanism class has access to every cellular quantity. In particular, only concentration models have access to current densities and molar fluxes.
 
 
-<a id="effects"/>
 ## Effects
+<a id="effects"/>
 
 Effects define how the mechanism state influences the cellular state. The list of possible effects is open to future extension, but the initial effects are as follows:
 
@@ -72,8 +71,8 @@ Restrictions:
 * Density mechanisms can only have current density or molar flux effects.
 
 
-<a id="events"/>
 ## Events
+<a id="events"/>
 
 As noted above, point mechanisms can receive _events_, upon which their state can be modified according to some formula. There are currently two supported sorts of events:
 
@@ -82,16 +81,16 @@ As noted above, point mechanisms can receive _events_, upon which their state ca
 * _Post_ is triggered when a spike is generated on the post-synaptic cell. There may be a delay between the spike generation and the _post_ event; the value of the _post_ event is the time between the spike generation and the event delivery.
 
 
-<a id="parameters"/>
 ## Parameters
+<a id="parameters"/>
 
 A mechanism can include _parameters_. These are named quantities with a default value that are constant throughout the evolution of a mechanism's state, but which can be overridden with user-supplied values when the mechanism is used in a cell model.
 
 For a parameter to be settable, it must be explicitly exported in the mechanism definition.
 
 
-<a id="lexical-grammar"/>
 # Lexical grammar
+<a id="lexical-grammar"/>
 
 Tokenization is governed by a grammar, described below in a variant of BNF, with the notation:
 
@@ -118,14 +117,14 @@ Tokenization is governed by a grammar, described below in a variant of BNF, with
 * A question mark indicates the preceding symbol or group may be omitted, that is, it can appear at most one time.
 
 
-<a id="character-set"/>
 ## Character set
+<a id="character-set"/>
 
 Arblang source is represented as a sequence of Unicode characters in normalization form C (NFC), excluding unassigned characters, surrogate code points, non-characters, and byte order marks. It is the responsibility of the interpreting environment to transform any particular source encoding to this representation.
 
 
-<a id="tokenization"/>
 ## Tokenization
+<a id="tokenization"/>
 
 A lexically valid Arblang source must admit a tokenization as a sequence of ***comment*** tokens, ***whitespace*** tokens, ***symbol*** tokens, ***string-literal*** tokens, ***superscript-literal*** tokens, ***numeric-literal*** tokens, and punctuation tokens.
 
@@ -133,8 +132,8 @@ A token has an associated value, which may be empty. If not empty, it is the res
 With the exception of string literals, canonicalization first applies Unicode compatibility normalization NFKC to the token text, then further processing as detailed below.
 
 
-<a id="comments"/>
 ### Comments
+<a id="comments"/>
 
 A comment is introduced by `#` and then extends to the end of the line. It is the only context in which a line end is not regarded simply as whitespace.
 
@@ -159,8 +158,8 @@ A ***comment*** token has no value.
 A _comment-character_ is any character that is not the first character of _new-line_. New line characters and sequences correspond to the [line boundaries requirement RL1.6 of Unicode Regular Expressions](https://www.unicode.org/reports/tr18/#RL1.6).
 
 
-<a id="whitespace"/>
 ### Whitespace
+<a id="whitespace"/>
 
 In some expressions, where it denotes multiplication, whitespace is mandatory, but otherwise whitespace is not significant. It comprises any non-empty sequence of characters with the White_Space property.
 
@@ -171,8 +170,8 @@ In some expressions, where it denotes multiplication, whitespace is mandatory, b
 A ***whitespace*** token has no value.
 
 
-<a id="symbols"/>
 ### Symbols
+<a id="symbols"/>
 
 Symbols correspond to Arblang identifiers and keywords. Arblang keywords are generally contextual: the interpretation of a symbol as an identifier or a keyword is determined in parsing.
 
@@ -199,8 +198,8 @@ Identifiers broadly follow the conventions of Python, except:
 * Characters that are only _compatibility_ equivalent to an acceptable _symbol_ character are not permitted. In particular, superscript numerals are not permitted within a _symbol_.
 
 
-<a id="superscript-literals"/>
 ### Superscript literals
+<a id="superscript-literals"/>
 
 A superscript literal is used to denote exponents in the absence of the exponentiation operator.
 
@@ -215,8 +214,8 @@ A superscript literal is used to denote exponents in the absence of the exponent
 After NFKC normalization, which takes superscript digits and minus to regular digits and U+2212 MINUS SIGN, the token value is canonicalized by mapping U+2212 to U+002d `-` HYPHEN-MINUS.
 
 
-<a id="numeric-literals"/>
 ### Numeric literals
+<a id="numeric-literals"/>
 
 Numeric literals represent both fractional and integer literal values.
 
@@ -253,8 +252,8 @@ After normalization, which takes superscript digits and minus to regular digits 
 * In order to accommodate loss-free rescaling of unit-bearing quantities, real and integer literals in arithmetic contexts should have an internal representation that maintains a normalized significand and a power of ten scale.
 
 
-<a id="string-literals"/>
 ### String literals
+<a id="string-literals"/>
 
 String literals encode arbitrary character sequences used to specify and identify interface and species names.
 
@@ -271,8 +270,8 @@ The value is taken as the characters between the initial and final `"` character
 The value of a ***string-literal*** token does _not_ undergo NFKC normalization, and so comprises an arbitrary sequence of Unicode characters in NFC normalization. While the syntax allows arbitary white space within a literal, including line separators and similar, the interpreting environment might impose further restrictions on what constitutes a valid interface name, for example.
 
 
-<a id="punctuation"/>
 ### Punctuation
+<a id="punctuation"/>
 
 > _punctuation_ ::=
 >     ***plus-sign*** | ***minus-sign*** | ***multiplication-dot*** | ***division-slash*** | ***exponent-op*** | ***preferential-union*** |
@@ -342,8 +341,8 @@ Punctuation token definitions:
 Punctuation tokens have no value.
 
 
-<a id="arblang-syntax-and-semantics"/>
 # Arblang syntax and semantics
+<a id="arblang-syntax-and-semantics"/>
 
 The syntax definitions below are defined in terms of the tokens defined in the lexical grammar, with the following conventions:
 
@@ -359,8 +358,8 @@ An arblang source document comprises a series of module and interface definition
 
 Module and interface definitions are described below.
 
-<a id="identifiers-and-scope"/>
 ## Identifiers and scope
+<a id="identifiers-and-scope"/>
 
 Identifiers are represented by ***symbol*** tokens and depending on context, may refer to:
 1. a module,
@@ -375,8 +374,8 @@ Identifiers are represented by ***symbol*** tokens and depending on context, may
 10. a function argument,
 11. or a local value binding.
 
-<a id="scopes"/>
 ### Scopes
+<a id="scopes"/>
 
 The association of an identifier with its referent is called a _binding_, and that binding is valid only within a _scope_. With one exception for regime names, an identifier's scope does not precede the point where that identifier is introduced by some declaration or binding.
 
@@ -400,8 +399,8 @@ Field names introduced in a record type or record value have record scope, which
 
 Scope form a hierarchy of inner and outer scopes, with the outermost scope being the global scope.
 
-<a id="context"/>
 ### Context
+<a id="context"/>
 
 Two different identifiers with the same ***symbol*** may be bound in the same scope, if they are in different _contexts_. There are five distinct contexts in arblang:
 
@@ -413,8 +412,8 @@ Two different identifiers with the same ***symbol*** may be bound in the same sc
 
 Each context can be regarded as constituting a different namespace for identifiers.
 
-<a id="masking"/>
 ### Masking
+<a id="masking"/>
 
 An identifier bound in a given context in an outer scope may be _masked_ by a binding of an identifier with the same ***symbol*** in an inner scope. This is permitted only in the following circumstances:
 
@@ -423,8 +422,8 @@ An identifier bound in a given context in an outer scope may be _masked_ by a bi
 
 It is otherwise an error to bind an identifier with the same ***symbol*** as an already bound identifier in the same context.
 
-<a id="qualified-identifers"/>
 ### Qualified identifers
+<a id="qualified-identifers"/>
 
 A qualified identifier is a term of the form:
 
@@ -482,8 +481,8 @@ module bar {
 }
 ```
 
-<a id="types-and-literals"/>
 ## Types and literals
+<a id="types-and-literals"/>
 
 Every expression has a type, which is either:
 
@@ -526,8 +525,8 @@ def g = fn (q: big) → f(q) : length;
 def c: length = 3;
 ```
 
-<a id="boolean"/>
 ### Boolean
+<a id="boolean"/>
 
 The boolean type has two possible values, true and false, and expressions of boolean type are constructed from the boolean literals and comparison expressions.
 
@@ -535,8 +534,8 @@ The boolean type has two possible values, true and false, and expressions of boo
 
 The boolean literals are keywords in an expression context, and may not be used as identifiers in this context.
 
-<a id="quantities"/>
 ### Quantities
+<a id="quantities"/>
 
 Quantities represent physical quantities, which in turn comprise a magnitude and a physical dimension. The specific unit scale underlying the representation of a physical quantity is implicit.
 
@@ -668,8 +667,8 @@ Note that the non-SI unit 'molar' is equal to 1 mol/L.
 
 As a possible extension, arblang might support non-zero based units such as degrees Celsius °C. Doing so, however, complicates the algebra; refer to the [appendix](#extension-offset-values-and-affine-spaces).
 
-<a id="records"/>
 ### Records
+<a id="records"/>
 
 A record is a labelled unordered tuple of values which are either quantities or records themselves. A record may not have two fields of the same name. A record type specification has the syntax:
 
@@ -754,8 +753,8 @@ The record literal is then algebraically equivalent to the following.
 }
 ```
 
-<a id="functions"/>
 ### Functions
+<a id="functions"/>
 
 A function literal gives a value of a function type. Function types have no representation in the arblang source language, and so cannot be used in type assertions, or in function arguments.
 
@@ -766,8 +765,8 @@ A function literal gives a value of a function type. Function types have no repr
 The identifiers introduced by _function-arg_ clauses have function scope which comprises the final defining expression. These are bound to parameter values in a function call expression (see _Expressions_ below). The final expression may be of any non-function type.
 
 
-<a id="expressions"/>
 ## Expressions
+<a id="expressions"/>
 
 The expression syntax below is ambiguous in that, for example, a function application or qualified identifier may be parsed as a _boolean-expr_, _algebraic-expr_, or _record-expr_. Each possible parse should be semantically equivalent.
 
@@ -776,8 +775,8 @@ The expression syntax below is ambiguous in that, for example, a function applic
 An expression of the form `expr: T` is valid if the type of `expr` is `T` or a supertype of `T`, and ill-formed otherwise. The type of `expr: T`, if well-formed, is always the type `T`.
 
 
-<a id="value-bindings"/>
 ### Value bindings
+<a id="value-bindings"/>
 
 > _value-binding_ ::= _let-binding_ | _with-binding_
 >
@@ -802,8 +801,8 @@ a.scale*(x+y);
 As the type of a value binding is the type of its final expression, syntactic ambiguity in type assertion parsing has no semantic consequence: `let id = expr₁; expr₂: T` has the type of `expr₂: T`, which is `T` iff the type of `expr₂` is `T` or a supertype of `T` ; similarly, `(let id = expr₁; expr₂): T` has type `T` iff the type of `let id = expr₁; expr₂`, which is the type of `expr₂` is `T` or a supertype of `T`.
 
 
-<a id="conditional-expressions"/>
 ### Conditional expressions
+<a id="conditional-expressions"/>
 
 > _conditional-expr_ ::= _if-expr_ | _case-expr_
 >
@@ -834,8 +833,8 @@ def rate = fn (T: temperature) →
 As with value bindings, there is no semantic ambiguity arising from an ambiguous parse from a trailing type assertion.
 
 
-<a id="boolean-expressions"/>
 ### Boolean expressions
+<a id="boolean-expressions"/>
 
 > _boolean-expr_ ::= _boolean-term_ ( `or` _boolean-term_ )*
 >
@@ -864,8 +863,8 @@ When a _comparison-expr_ `expr₁ op expr₂` compares two terms of the same qua
 A _boolean-expr_ may not involve any boolean or comparison operations, and be equivalently parsed as an algebraic expression. In this instance, its type and value is the same as if it were parsed directly as an algebraic expression.
 
 
-<a id="algebraic-expressions"/>
 ### Algebraic expressions
+<a id="algebraic-expressions"/>
 
 > _algebraic-expr_ ::= _algebraic-term_ ( ( ***plus-sign*** | ***minus-sign*** ) _algebraic-term_ )*
 >
@@ -884,8 +883,8 @@ An additive expression of the form `expr₁ + expr₂` or `expr₁ - expr₂` is
 A _function-application_ expression is well-formed iff the function type of the _function-literal_ or the function value bound to _qualified-identifier_ is compatible with the number and types of the _expression_ clauses constituting the arguments. If the function value corresponds to the form `fn (a₁: T₁, …) → result`, then the value of the function application expression with arguments `expr₁`, … is the value of the expression `let a₁: T₁ = expr₁; … result`.
 
 
-<a id="record-expressions"/>
 ### Record expressions
+<a id="record-expressions"/>
 
 > _record-expr_ ::= _record-term_ ( ***preferential-union*** _record-term_ )*
 >
@@ -898,8 +897,8 @@ Access to a field in a record that is bound to an identifier can be made via the
 Records of different types can be combined with the ***preferential-union*** operator: given a record _r_ with fields _fᵢ_ and values _vᵢ_ for _i_∈_I_, and another record _s_ with fields _gⱼ_ and values _wⱼ_ for _j_∈_J_, the expression _r_ ⊔ _s_ is a record with a set of fields {_fᵢ_}∪{_gⱼ_}, and the value of a field _h_ in this record is _vᵢ_ if there exists a field _fᵢ_=_h_, else _wⱼ_ for the field _wⱼ_=_h_. Essentially, the record comprises all the fields of the left hand side, together with any fields from the record on the right hand side which don't have the same name as a field in the first record.
 
 
-<a id="precedence"/>
 ### Precedence
+<a id="precedence"/>
 
 Where this is ambiguity in expression parsing, operators should be considered in the following order of decreasing precedence. In the table, _f_, _j_, _x_ and _y_ stand for expressions of the appropriate type.
 
@@ -931,14 +930,14 @@ Notes:
 3. <a id="precedence-note-3"/> Multiple adjacent unary minus operators should be perohibited by the _algebraic-factor_ syntax rule.
 
 
-<a id="modules-and-interfaces"/>
 ## Modules and interfaces
+<a id="modules-and-interfaces"/>
 
 Modules are used to collect parameters, constants, and function definitions; interfaces are used to define a particular sort of Arbor functionality, such as ion channel or gap junction dynamics. Module and interface definitions can only be provided at top level.
 
 
-<a id="module-definition"/>
 ### Module definition
+<a id="module-definition"/>
 
 > _module-defn_ ::= `module` ***symbol*** `{` ( _type-alias_ | _parameter-defn_ | _constant-defn_ | _function-defn_ | _module-import_ )\* `}`
 >
@@ -953,14 +952,14 @@ Modules are used to collect parameters, constants, and function definitions; int
 > _function-defn_ ::= `def` ***symbol*** _argument-list_ `=` _function-literal_ `;`
 
 
-<a id="interface-definition"/>
 ### Interface definition
+<a id="interface-definition"/>
 
 **TODO**
 
 
-<a id="module-imports"/>
 #### Module imports
+<a id="module-imports"/>
 
 Identifiers bound in module scope in one module can be used in another module or interface, if the module is imported. If a module `A` is imported as `B`, a type, parameter, constant, or function _x_ defined in `A` can be referenced with the qualified identifier `B`._x_.
 
@@ -982,8 +981,8 @@ module Y {
 ```
 
 
-<a id="constant-and-function-definitions"/>
 ### Constant and function definitions
+<a id="constant-and-function-definitions"/>
 
 **TODO**
 
@@ -1199,8 +1198,8 @@ interface concentration "CaBuffered" {
 
 # Appendices
 
-<a id="extension-offset-values-and-affine-spaces"/>
 ## Extension: offset values and affine spaces
+<a id="extension-offset-values-and-affine-spaces"/>
 
 *TODO* Discussion of how to handle units like °C.
 #### Notes
