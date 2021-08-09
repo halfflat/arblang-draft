@@ -488,7 +488,7 @@ module bar {
 Every expression has a type, which is either:
 
 1. Boolean.
-2. A quantity (see below).
+2. A quantity.
 3. A record type, comprising an unordered sequence of named fields, with each field being either a quantity or another record type.
 4. A function.
 
@@ -699,7 +699,7 @@ r.b
 
 `r` has type `{ a: real; b: length; }` and is bound to the value `{ a = 4; b = 3 m; }`, because the `a` in the right hand side of `b = a` is in expression context, and so is bound to to the value 3 as given in the outer `let`.
 
-Field values in a record are accessed via a qualified identifier (see above), or by immediate field access (see Record expressions, below), or brought into scope via a `with` binding (see Value bindings, below).
+Field values in a record are accessed via a qualified identifier (see [Qualified identifiers](#qualified-identifiers) above), or by immediate field access (see [Record expressions](#record-expressions) below), or brought into scope via a `with` binding (see [Value bindings](#value-bindings), below).
 
 ```
 let r = { a = 4; }; r.a   # qualified identifer evalates to value 4
@@ -754,14 +754,12 @@ The record literal is then algebraically equivalent to the following.
 }
 ```
 
-
-
 <a id="functions"/>
 ### Functions
 
 A function literal gives a value of a function type. Function types have no representation in the arblang source language, and so cannot be used in type assertions, or in function arguments.
 
-> _function-literal_ ::= `fn` `(` ( _function-arg_ ( `,` _function-arg_ )* )? `)` ***right-arrow*** _expression_
+> _function-literal_ ::= `fn` `(` ( _function-arg_ ( `,` _function-arg_ )* )? `)` ***right-arrow*** _expression_ | `(` _function-literal_ `)`
 >
 > _function-arg_ ::= ***symbol*** _type-assertion_
 
@@ -773,11 +771,9 @@ The identifiers introduced by _function-arg_ clauses have function scope which c
 
 The expression syntax below is ambiguous in that, for example, a function application or qualified identifier may be parsed as a _boolean-expr_, _algebraic-expr_, or _record-expr_. Each possible parse should be semantically equivalent.
 
-> _expression_ ::= _expression-base_ _type-assertion_? | `(` _expression_ `)`
->
-> _expression-base_ ::= _function-literal_ | _value-binding_ | _conditional-expr_ | _boolean-expr_ | _algebraic-expr_ | _record-expr_
+> _expression_ ::= ( _value-binding_ | _conditional-expr_ | _boolean-expr_ | _algebraic-expr_ | _record-expr_ ) _type-assertion_? | `(` _expression_ `)`
 
-Type assertions present another possible ambiguous parse; where ambiguous, type assertions have the highest precedence — see _Precedence_ below. An expression of the form `expr: T` is valid if the type of `expr` is `T` or a supertype of `T`, and ill-formed otherwise. The type of `expr: T`, if well-formed, is always the type `T`.
+An expression of the form `expr: T` is valid if the type of `expr` is `T` or a supertype of `T`, and ill-formed otherwise. The type of `expr: T`, if well-formed, is always the type `T`.
 
 
 <a id="value-bindings"/>
@@ -785,7 +781,7 @@ Type assertions present another possible ambiguous parse; where ambiguous, type 
 
 > _value-binding_ ::= _let-binding_ | _with-binding_
 >
-> _let-binding ::= `let` ***symbol*** _type-assertion_? `=` _expression_ `;` _expression_
+> _let-binding ::= `let` ***symbol*** ( _type-assertion_? `=` _expression_ | `=` _function-literal_ ) `;` _expression_
 >
 > _with-binding_ ::= `with` _expression_ `;` _expression_
 
@@ -817,14 +813,14 @@ As the type of a value binding is the type of its final expression, syntactic am
 
 Alternatives based on one or more conditions can be expressed with if/then/else clauses or case expressions introduced with the bar symbol. In either, the conditional expression is ill-formed if any of the _boolean-expr_ have type which is not boolean.
 
-The value of `if condition then expr₁ else expr₂` is the value of `expr₁` in the case where `condition` evaluates to true, and `expr₂` otherwise. The type of the _if-expr_ is the type of `expr₁` and `expr₂`; the expression is ill-formed if the types of `expr₁` and `expr₂` differ.
+The value of `if condition then expr₁ else expr₂` is the value of `expr₁` in the case where `condition` is true, and `expr₂` otherwise. The type of the _if-expr_ is the type of `expr₁` and `expr₂`; the expression is ill-formed if the types of `expr₁` and `expr₂` differ.
 
 The value of `| otherwise → expr` is just the value of `expr`. `true` can be used in place of `otherwise` equivalently. For a compound _case-expr_ of the form `| condition → expr₁ case₂`, the value is `expr₁` in the case where `condition` is true, and the value of `case₂` otherwise; the expression is ill-formed if the types of `expr₁` and `case₂` differ.
 
 Example:
 
 ```
-# Always evaluates to 10 km.
+# Equivalent to 10 km:
 let a = if 3>2 then 10 m else 2 m; a*1000
 
 # Piece-wise constant reaction rate function.
@@ -853,7 +849,7 @@ As with value bindings, there is no semantic ambiguity arising from an ambiguous
 >
 > _comparison-base_ ::= _algebraic-expr_ | `(` _expression_ `)`
 
-A compound boolean expression of the form `expr₁ or expr₂` is well defined only if the types of `expr₁` and `expr₂` are both boolean. The value is false if both `expr₁` and `expr₂` have value false, and true otherwise. The `or` operation can be considered to be left associative, but the `or` operation is both commutative and associative, and consequently there is no ambiguity resulting in expression evaluation order.
+A compound boolean expression of the form `expr₁ or expr₂` is well defined only if the types of `expr₁` and `expr₂` are both boolean. The value is false if both `expr₁` and `expr₂` have value false, and true otherwise. The `or` operation can be considered to be left associative, but the `or` operation is both commutative and associative.
 
 The boolean operator `and` has higher precedence than that of `or`, and `expr₁ and expr₂` has value true iff `expr₁` has value true and `expr₂` has value true. The expression is ill-formed if `expr₁` or `expr₂` do not have type boolean. Similarly to `or`, the operator can be considered to be left-associative, but there is no ambiguity regardless.
 
@@ -861,7 +857,7 @@ The boolean operator `and` has higher precedence than that of `or`, and `expr₁
 
 A _comparison-expr_ of the form `expr₁ == expr₂` or `expr₁ ≠ expr₂` is well-defined iff `expr₁` and `expr₂` have the same type, with that type being a quantity type, a record type, or boolean. Its value is true if the two expressions have the same boolean or quantity values or if the expressions are of the same record type and `(expr₁).f == (expr₂).f` for each field `f` in this record type, and is otherwise false. `expr₁ ≠ expr₂`, if well-defined, is true iff `expr₁ == expr₂` is false.
 
-A _comparison-expr_ of the form `expr₁ op expr₂` where `op` is not `==` nor `≠` is well-defined iff `expr₁` and `expr₂` have the same quantity type.  The comparison operators `≥`, `>`, `≤`, `<` evaluate in accordance with the usual order on real values, after applying any requisite scaling to equate units.
+A _comparison-expr_ of the form `expr₁ op expr₂` where `op` is not `==` nor `≠` is well-defined iff `expr₁` and `expr₂` have the same quantity type.  The comparison operators `≥`, `>`, `≤`, `<` respect the usual ordering on real numbers, after applying any requisite scaling to equate units.
 
 When a _comparison-expr_ `expr₁ op expr₂` compares two terms of the same quantity type which may carry an offset value from a non-zero based unit, the value is equivalent to `expr₁ - expr₂ op zero` where `zero` is a zero-valued quantity of the same type as `expr₁`. See _Offset value arithmetic_ below.
 
@@ -875,9 +871,9 @@ A _boolean-expr_ may not involve any boolean or comparison operations, and be eq
 >
 > _algebraic-term_ ::= _algebraic-factor_ ( ( ***multiplication-dot*** | ***asterisk*** | ***division-slash*** ) _algebraic-factor_ )*
 >
-> _algebraic-factor ::= _quantity-literal_ | ( ***minus-sign***? ( _function-application_ | _qualified-identifer_ | _record-field-expr_ | ***numeric-literal*** | `(` _expression_ `)` ) _exponent_ )
+> _algebraic-factor ::= _quantity-literal_ | ( ***minus-sign***? ( _function-application_ | _qualified-identifer_ | _record-field-expr_ | ***numeric-literal*** | `(` _expression_ `)` ) _algebraic-exponent_ )
 >
-> _exponent_ ::= ***superscript-literal*** | ( `^` _algebraic-factor_ )*
+> _algebraic-exponent_ ::= ***superscript-literal*** | ( `^` _algebraic-factor_ )*
 
 Additive operators `+` and `-` and multiplicative operators `*` (or `·`) and `/` are all left associative. Multiplicative operators have higher precedence than additive operators.
 
@@ -905,15 +901,34 @@ Records of different types can be combined with the ***preferential-union*** ope
 <a id="precedence"/>
 ### Precedence
 
-**TODO**
+Where this is ambiguity in expression parsing, operators should be considered in the following order of decreasing precedence. In the table, _f_, _j_, _x_ and _y_ stand for expressions of the appropriate type.
 
-### Offset value arithmetic
+| Operator                   | Description              | Associativity | Notes |
+|----------------------------|--------------------------|---------------|-|
+| _x_._y_                    | Record field             | left          | |
+| _f_`(`…`)`                 | Function application     | left          | [1](#precedence-note-1) |
+| _x_`^`_y_, _xʲ_            | Exponentiation           | right         | [2](#precedence-note-2) |
+| `-`                        | Unary minus              | right         | [3](#precedence-note-3) |
+| _x_·_y_, _x_/_y_           | Product, quotient        | left          | |
+| _x_+_y_, _x_-_y_           | Sum, difference          | left          | |
+| `⊔`                        | Preferential union       | left          | |
+| `<`, `≤`, `>`, `≥`         | Order comparitsons       | left          | |
+| `==`, `≠`                  | Compare equal, not equal | left          | |
+| `not`                      | Logical not              | right         | |
+| `and`                      | Logical and              | left          | |
+| `or`                       | Logical or               | left          | |
+| `:` _type-expr_            | Type assertion           | left          | |
+| `if` _x_ `then` y `else` z | Ternary conditional      | right         | |
+| `\|` _x_ → _y_             | Case expression          | right         | |
+| `let`, `with`              | Value bindings           | right         | |
 
-**TODO** Grab and rewrite comments above re: degrees Celsius.
+Notes:
 
-### Evaluation of expressions
+1. <a id="precedence-note-1"/> Function application can be considered left associative in accordance with mathematical convention, but it cannot arise while function values are unable to be returned from an arblang function.
 
-**TODO** Clarify what is meant by this! I.e. difference between mathematical terms and their interpretation by the compiler/interpreter.
+2. <a id="precedence-note-2"/> Multiple exponentiation by superscript literal should be prohibited by the _alegebraic-exponent_ syntax rule.
+
+3. <a id="precedence-note-3"/> Multiple adjacent unary minus operators should be perohibited by the _algebraic-factor_ syntax rule.
 
 
 <a id="modules-and-interfaces"/>
@@ -927,21 +942,15 @@ Modules are used to collect parameters, constants, and function definitions; int
 
 > _module-defn_ ::= `module` ***symbol*** `{` ( _type-alias_ | _parameter-defn_ | _constant-defn_ | _function-defn_ | _module-import_ )\* `}`
 >
+> _module-import_ ::= `import` ***symbol*** ( `as` ***symbol*** )
+>
 > _type-alias_ ::= `type` ***symbol*** `=` _type-expr_ `;`
 >
 > _parameter-defn_ ::= `parameter` _type-expr_? ***symbol*** `=` _expression_ `;`
 >
 > _constant-defn_ ::= `def` ***symbol*** _type-assertion_? `=` _expression_ `;`
 >
-> _constant-defn_ ::= `def` ***symbol*** _type-assertion_? `=` _expression_ `;`
->
-> _function-defn_ ::= `fn` ***symbol*** _argument-list_ `=` _expression_ `;`
->
-> _argument-list_ ::= `(` ( _type-expr_ ***symbol*** ( `,` _type-expr_ ***symbol*** )* )? `)`
->
-> _module-import_ ::= `import` ***symbol*** ( `as` ***symbol*** )
->
-> _type-assertion_ ::= `:` _type-expr_
+> _function-defn_ ::= `def` ***symbol*** _argument-list_ `=` _function-literal_ `;`
 
 
 <a id="interface-definition"/>
