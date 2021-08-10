@@ -89,6 +89,12 @@ A mechanism can include _parameters_. These are named quantities with a default 
 For a parameter to be settable, it must be explicitly exported in the mechanism definition.
 
 
+## Regimes
+<a id="regime"/>
+
+The dynamics of the mechanism are governed by one or more dynamical _regimes_. Within a regime, the evolution of the mechanism state is provided via an explicit ODE system, and predicates on that state or external events can trigger discrete changes in the state value and a state transition to a different regime.
+
+
 # Lexical grammar
 <a id="lexical-grammar"/>
 
@@ -778,8 +784,11 @@ The expression syntax below is ambiguous in that, for example, a function applic
 
 > _expression_ ::= ( _value-binding_ | _conditional-expr_ | _boolean-expr_ | _algebraic-expr_ | _record-expr_ ) _type-assertion_? | `(` _expression_ `)`
 
-An expression of the form `expr: T` is valid if the type of `expr` is `T` or a supertype of `T`, and ill-formed otherwise. The type of `expr: T`, if well-formed, is always the type `T`.
+An expression with type assertion of the form `expr: T` is valid if the type of `expr` is `T` or a supertype of `T`, and ill-formed otherwise. The type of `expr: T`, if well-formed, is always the type `T`.
 
+Each identifier or qualified identifier in an expression must be bound (in the context determined by its occurance). In expression context, the identifier or qualified identifier may be bound to a function argument, to another expression via a value binding in an outer expression, to a record field, to a module constant or function definition, to a module parameter, or to an external quantity via an interface binding.
+
+An expression is a _constant_ expression if every identifier in the expression is bound to a module constant or another constant expression, and if every function application subexpression has a value that is a constant expression. Similarly, an expression is _parameter-constant_ if every identifier is boound to a module constant or parameter, or another parameter-constant expression, and if every function application has a value that is parameter-constant expression.
 
 ### Value bindings
 <a id="value-bindings"/>
@@ -882,7 +891,13 @@ A _boolean-expr_ may not involve any boolean or comparison operations, and be eq
 
 Additive operators `+` and `-` and multiplicative operators `*` (or `·`) and `/` are all left associative. Multiplicative operators have higher precedence than additive operators.
 
-An additive expression of the form `expr₁ + expr₂` or `expr₁ - expr₂` is well defined iff `expr₁` and `expr₂` have the same quantity type. The expression has the same quantity type, with the value corresponding to the regular arithmetic operation after any requisite scaling to equalize units. For values that may carry an offset from a non-zero based unit, refer to _Offset value arithmetic_ below.
+An additive expression of the form `expr₁ + expr₂` or `expr₁ - expr₂` is well formed iff `expr₁` and `expr₂` have the same quantity type. The expression has the same quantity type, with the value corresponding to the regular arithmetic operation after any requisite scaling to equalize units. For values that may carry an offset from a non-zero based unit, refer to _Offset value arithmetic_ below.
+
+A multiplicative expression of the form `expr₁·expr₂` or `expr₁/expr₂` is well defined if `expr₁` and `expr₂` have types _T₁_ and _T₂_ respectively, both of which are quantity types. The resultant type is the quantity-type _T₁·T₂_ or _T₁/T₂_ accordingly.
+
+A power expression of the form `expr₁^expr₂` is well formed iff `expr₁` and `expr₂` are both of type real or `expr₁` has a quantity type and `expr₂` is an integer valued constant expression. A power expression with a superscript exponent is defined similarly.
+
+The value of an additive, multiplicative or power expression follows the usual calculi of physical quantities (for one of a number of formal treatmes, see for example, P Szekeres, _The mathematical foundations of dimensional analysis and the question of fundamental units_, International Journal of Theoretical Physics 17 no. 12 (1978), doi:10.1007/BF00678423, pp. 957–974).
 
 > _function-application_ ::= ( _qualified-identifier_ | `(` _function-literal_ `)` ) `(` ( _expression_ ( `,` _expression_ )* )? `)`
 
@@ -1033,8 +1048,6 @@ Models using the "foo" mechanism can set the parameter `a` to some voltage. If i
 
 **TODO**
 
-The expression on the right hand side of a constant definition may depend only on identifiers bound to constants.
-
 
 ### Interface definition
 <a id="interface-definition"/>
@@ -1051,9 +1064,9 @@ The expression on the right hand side of a constant definition may depend only o
 >
 > _export-qualifier_ ::= `density`
 >
-> _interface-binding_ ::= `bind` _identifer_ _type-assertion_? = _bindable-state_ `;`
+> _interface-binding_ ::= `bind` _identifer_ _type-assertion_? = _bindable_ `;`
 >
-> _bindable-state_ ::= `state` | `membrane` `potential` | `temperature` | (`current` `density` | `molar` `flux`) _species-name_ | (`internal` | `external`) `concentration` _species-name_ | `charge` _species-name_
+> _bindable_ ::= `state` | `membrane` `potential` | `temperature` | (`current` `density` | `molar` `flux`) _species-name_ | (`internal` | `external`) `concentration` _species-name_ | `charge` _species-name_
 >
 > _initial-defn_ ::= `initial` ( `regime` _qualified-identifier_ )? ( _initial-post-expr_ `from` )? `state` _type-assertion_? `=` _expression_ `;`
 >
@@ -1081,18 +1094,27 @@ Definitions and bindings in interface definitions, much like in modules, have mo
 
 * The same identifier cannot be bound with `bind` more than once.
 
-* The safe _effect_ can not be defined more than once.
+* The same _effect_ can not be defined more than once.
 
+In the module context of an interface, the identifier `state` is already bound in an expression context to the _bindable_ `state`, and is bound to the type of the _bindable_ `state` in a type context. `state'` is the implicitly defined type alias for the derivative type of `state`. This does not preclude other bindings to the _bindable_ `state`.
 
 #### Initial definition
 
- **TODO**
+The value bound to `state` in an _initial-defn_ must be of a record or quantity type. This value defines or is used to compute the initial value of the initial value problem defined by interface `evolve` and `when` definitions. The type of this value determines the type of the bindable state and the state derivative expression used in an _evolve-defn_.
 
-The value bound to `state` in an _initial-defn_ must be of a record or quantity type.
+The initial regime is determined by the _regime_ clause; if none is given, the initial regime is the unnamed top-level regime.
 
-#### When definitions
+If there is an _initial-post-expr_ `steady`, the initial state value is derived from the provided state value _s_ as a steady-state solution to the initial value problem with value _s_ at time zero and any bound interface values held constant. 
 
-**TODO**
+If there is an _initial-post-expr_ `evolve for t` for some expression _t_, the initial state value is derived from the provided state value _s_ as the solution at time _t_ of the initial value problem with value _s_ at time zero and any bound interface values held constant. The expression _t_ must be parameter-constant.
+
+If the interface has no _initial-definition_ at all, the initial state is defined to be the empty record `{}`.
+
+#### Regime definitions
+
+A regime defines the dynamical evolution of the mechanism state. There is always a top-level, unnamed regime, but more regimes can be introduced with a _regime-defn_. Associated with each regime is an evolution definition and a set of conditions that determine behaviour upon an external event or the satisfaction of some predicate.
+
+**TODO** --- continue.
  
 When a `when` clause is given a boolean expression (as opposed to an external event), that expression must have type boolean.
 
@@ -1112,102 +1134,6 @@ Type definitions are only for record types:
 
 **TODO**
 
-Types, records and expressions are described below.
-
-> &lt;interface-defn&gt; ::= `interface` &lt;interface-class&gt; &lt;string-literal&gt; `{` [ &lt;pararameter-defn&gt; | &lt;export&gt; | |&lt;combined-export-parameter-defn&gt; | &lt;constant-defn&gt; | &lt;record-alias-defn&gt; | &lt;function-defn&gt; | &lt;module-import&gt; | &lt;binding&gt; | &lt;initial-decl&gt; | &lt;regime-defn&gt; | &lt;regime-internal-decl&gt;]* `}`
->
-> &lt;export&gt; ::= `export` [`density`] `parameter` [&lt;type-expr&gt;] &lt;qualified-identifier&gt; [ `as` &lt;identifier&gt; ]
->
-> &lt;combined-export-parameter-defn&gt; ::= `export` [`density`] <parameter-defn>
->
-> &lt;binding&gt; ::= `bind` [&lt;type-expr&gt;] &lt;identifer&gt; = &lt;bindable-state&gt; `;`
->
-> &lt;initial-defn&gt; ::= `initial` [`regime` &lt;qualified-identifier&gt;] [ &lt;initial-post-expr&gt; `from` ] [&lt;type-expr&gt;] `state` `=` &lt;expression&gt; `;`
->
-> &lt;initial-post-expr&gt; ::= `steady` | `evolve` `for` &lt;expression&gt;
->
-> &lt;regime-defn&gt; ::= `regime` &lt;identifier&gt; `{` [ &lt;regime-internal-defn&gt; | &lt;regime-defn&gt; ] `}`
->
-> &lt;regime-internal-defn&gt; ::= `evolve-defn` | &lt;when-defn&gt; | &lt;effect-defn&gt;
->
-> &lt;evolve-defn&gt; ::= `evolve` [`explicit`] [&lt;type-expr&gt;] `state'` `=` &lt;expression&gt; `;`
->
-> &lt;when-defn&gt; ::= `when` &lt;when-condition&gt; `;` [ `regime` &lt;qualified-identifier&gt; ] `state` `=` &lt;expression&gt; `;`
->
-> &lt;when-condition&gt; ::= &lt;expression&gt; | [&lt;type-expr&gt;] &lt;identifier&gt; = ( `event` | `post` )
->
-> &lt;effect-defn&gt; ::= &lt;effect&gt; = &lt;expression&gt; `;`
-
-The sets of possible bindable states, effects, and interface classes are finite, but may be extended in the future. Not all bindable states or effects are permissible in all interface classes. `density` parameters are intended to describe parameters that may be linearly interpolated, and are only supported in interface classes where this is meaningful.
-
-> &lt;interface-class&gt; ::= `density` | `discrete` | `concentration`
->
-> &lt;bindable-state&gt; ::= `state` | `membrane` `potential` | `temperature` | (`current` `density` | `molar` `flux`) &lt;species-name&gt;) | (`internal` | `external`) `concentration` &lt;species-name&gt; | `charge` &lt;species-name&gt;
->
-> &lt;effect&gt; ::= `current` `density` [&lt;species-name&gt;] | `molar` `flow` `rate` &lt;species-name&gt; | `current` [&lt;species-name&gt;] | `molar` `flux` &lt;species-name&gt; | (`internal` | `external`) `concentration`
->
-> &lt;species-name&gt; ::= &lt;string-literal&gt;
-
-## Module semantics
-
-**TODO:** explain parameters; module imports.
-
-## Interface semantics
-
-An interface provides, generally:
-
-1. A _state_ that evolves over time, as a function of various local cellular quantities.
-2. A set of user-settable parameters.
-3. A set of _effects_ that the state imposes locally upon the cell.
-
-The initial state and its type is given by the `initial` declaration. For example,
-```
-    initial state = { a = 0 S; b = 0 S; };
-```
-declares the state has type `record { conductance a; conductance b; }` and that its initial
-value has zero in both fields.
-
-The initial state can be qualified with `steady` or `evolve for` to indicate that the provided value should be integrated over time by some given value or until steady state before being used as an initial value. The evolution is that given by subsequent `evolve` declarations. The degree to which this is supported in an implementation will depend very much on the nature of the evolution function(s).
-
-Evolution is governed by one or more _regimes_. In the simplest case, there is just the one, default regime, but more generally, multiple regimes may be defined, and transitions between them can be triggered by boolean-valued expressions that are a function of state and bound cell quantities, or by pre- or post-synaptic events. Regime definitions can be nested, and an inner regime definition inherits any triggers from the enclosing scope, and the evolution function from the enclosing scope as well, if it is not overridden. The initial regime can be specified in the `initial` definition. The default regime has no name, and so cannot be a target of `regime` clauses in a `when` definition.
-
-The evolution function is defined with the `evolve` definition, and there may only be one `evolve` per regime. The expression on the rhs must have type equal to the 'derivative' type of the state. The derivative of a quantity is that quantity divided by time; the derivative of a record type is the record type where each field _x_ is replaced by a field _x'_ with type the derivative type of _x_. See the discusion under record types below for more details.
-
-Effects tie the state to the cell, defining how the state determines ionic currents or species flows, or how it governs species concentrations.
-
-Exports make parameters visible and settable by models that employ the interface. As a convenience, an export and a parameter definition can be combined in a single export declaration.
-
-If the interface doesn't require any evolving state, it can omit the `initial` and `evolve` definitions.
-
-### Density models
-
-Density models represent a process which is distributed over an areal extent of the cell membrane. Parameters defined in density models may be labelled as `density` parameters — such parameters are declared to be safe to interpolate, and can be used with spatitally varying scaling, for example.
-
-Bindable states: state; membrane potential; temperature; internal/external concentration "_species_"; charge "_species_".
-
-Effects: current density (non-specific); current density "_species_"; molar flux "_species_".
-
-Events: only boolean-valued expressions.
-
-### Discrete models
-
-Discrete models capture localized effects and can react in response to incoming spike events or post-synaptic spike detection events. They may not have `density` parameters.
-
-Bindable states: state; membrane potential; temperature; internal/external concentration "_species_"; charge "_species_".
-
-Effects: current (non-specific); current "_species_"; molar flow rate "_species_".
-
-Events: any.
-
-### Concentration models
-
-Concentration models determine the internal and/or external concentration of a species over time. As specified, only one concentration model can be used to determine the state of a species in any given region of a cell. The initial value of the state determines the initial value(s) of the concentration.
-
-Bindable states: state; membrane potential; temperature; current density "_species_"; molar flux "_species_"; charge "_species_". Note that the concentrations themselves are _not_ bindable.
-
-Effects: internal/external concentration "_species_".
-
-Events: only boolean-valued expressions.
 
 ### Alternative concentration model
 
@@ -1303,6 +1229,10 @@ interface concentration "CaBuffered" {
 | 
 | All three approaches can lead to surprsing behaviour, given the differences in interprertation between addition and subtraction with offset-bearing quantities. The best approach might be to remove the °C unit altogether.
 | 
+
+## Extension: fractional units and quantities
+
+*TODO* (But basically: allow factions as superscript powers and constant rational expressions as exponents; algebra of quantities is extended accordingly.)
 
 ## Extension: range-limited quantities
 
