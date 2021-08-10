@@ -525,6 +525,12 @@ def g = fn (q: big) → f(q) : length;
 def c: length = 3;
 ```
 
+A quantity type or record has an associated _derivative type_:
+
+* The derivative type of a quantity type _Q_ is _Q_/ti
+
+* The derivative type of a record type with fields _fᵢ_ of types _Tᵢ_ is the record type with fields _fᵢ_' and types _Uᵢ_ which are the derivative types of _Tᵢ_.
+
 ### Boolean
 <a id="boolean"/>
 
@@ -756,7 +762,7 @@ The record literal is then algebraically equivalent to the following.
 ### Functions
 <a id="functions"/>
 
-A function literal gives a value of a function type. Function types have no representation in the arblang source language, and so cannot be used in type assertions, or in function arguments.
+A function literal gives a value of a function type. Function types have no representation in the arblang source language, and so cannot be used in type assertions, or in function arguments. Function literals may only appear in _function-application_ expressions or as the bound value in a _let-binding_ or module _function-defn_.
 
 > _function-literal_ ::= `fn` `(` ( _function-arg_ ( `,` _function-arg_ )* )? `)` ***right-arrow*** _expression_ | `(` _function-literal_ `)`
 >
@@ -840,7 +846,7 @@ As with value bindings, there is no semantic ambiguity arising from an ambiguous
 >
 > _boolean-term_ ::= _boolean-factor_ ( `and` _boolean-factor_ )*
 >
-> _boolean-factor_ ::= `not`? ( _comparison-expr_ | _function_application_ | _qualified-identifier_ | _boolean-literal_ | `(` _boolean-expr_ `)` )
+> _boolean-factor_ ::= `not`? ( _comparison-expr_ | _function-application_ | _qualified-identifier_ | _boolean-literal_ | `(` _boolean-expr_ `)` )
 >
 > _comparison-expr_ ::= _comparison-base_ _comparison-op_ _comparison-base_
 >
@@ -904,12 +910,12 @@ Where this is ambiguity in expression parsing, operators should be considered in
 
 | Operator                   | Description              | Associativity | Notes |
 |----------------------------|--------------------------|---------------|-|
-| _x_`.`_y_                    | Record field             | left          | |
+| _x_`.`_y_                  | Record field             | left          | |
 | _f_`(`…`)`                 | Function application     | left          | [1](#precedence-note-1) |
 | _x_`^`_y_, _xʲ_            | Exponentiation           | right         | [2](#precedence-note-2) |
 | `-`                        | Unary minus              | right         | [3](#precedence-note-3) |
-| _x_`·`_y_, _x_`/`_y_           | Product, quotient        | left          | |
-| _x_`+`_y_, _x_`-`_y_           | Sum, difference          | left          | |
+| _x_`·`_y_, _x_`/`_y_       | Product, quotient        | left          | |
+| _x_`+`_y_, _x_`-`_y_       | Sum, difference          | left          | |
 | `⊔`                        | Preferential union       | left          | |
 | `<`, `≤`, `>`, `≥`         | Order comparitsons       | left          | |
 | `==`, `≠`                  | Compare equal, not equal | left          | |
@@ -939,26 +945,21 @@ Modules are used to collect parameters, constants, and function definitions; int
 ### Module definition
 <a id="module-definition"/>
 
-> _module-defn_ ::= `module` ***symbol*** `{` ( _type-alias_ | _parameter-defn_ | _constant-defn_ | _function-defn_ | _module-import_ )\* `}`
+> _module-defn_ ::= `module` ***symbol*** `{` _module-decl_* `}`
+>
+> _module-decl_ ::=  _type-alias_ | _parameter-defn_ | _constant-defn_ | _function-defn_ | _module-import_
 >
 > _module-import_ ::= `import` ***symbol*** ( `as` ***symbol*** )
 >
 > _type-alias_ ::= `type` ***symbol*** `=` _type-expr_ `;`
 >
-> _parameter-defn_ ::= `parameter` _type-expr_? ***symbol*** `=` _expression_ `;`
+> _parameter-defn_ ::= `parameter` ***symbol*** _type-assertion_? `=` _expression_ `;`
 >
 > _constant-defn_ ::= `def` ***symbol*** _type-assertion_? `=` _expression_ `;`
 >
-> _function-defn_ ::= `def` ***symbol*** _argument-list_ `=` _function-literal_ `;`
+> _function-defn_ ::= `def` ***symbol*** `=` _function-literal_ `;`
 
-
-### Interface definition
-<a id="interface-definition"/>
-
-**TODO**
-
-
-#### Module imports
+#### Module import
 <a id="module-imports"/>
 
 Identifiers bound in module scope in one module can be used in another module or interface, if the module is imported. If a module `A` is imported as `B`, a type, parameter, constant, or function _x_ defined in `A` can be referenced with the qualified identifier `B`._x_.
@@ -980,47 +981,41 @@ module Y {
 }
 ```
 
+Note that in a module import `import module A as B`, `A` is interpreted in module context, while `B` is interpreted in expression context. So the following is well-formed,
+```
+module A { }
+module B {
+   def A = 3;
+   import A as M;
+}
+```
+but
+```
+module A { }
+module B {
+   def M = 3;
+   import A as M;
+}
+```
+is not, as `M` is being rebound in module scope in an expression context.
 
-### Constant and function definitions
-<a id="constant-and-function-definitions"/>
+
+#### Type aliases
 
 **TODO**
 
-### Type aliases
+(Don't forget to mention derivative syntax for type aliases)
 
-**TODO**
+#### Parameters
 
-#### Notes
+A parameter definition introduces a new identifier in module scope, together with a default value. Parameters can be used in any following expression within the module. The expression to which a parameter is bound may not include identifiers that are bound in an interface to external quantities, but may include other parameters.
 
-As noted above in the section on identifiers, the same identifier may not be rebound within a module or interface definition, but _is_ permitted to refer to a type in a type context, a value inan expression context, and a module in an module import context.
-
-Type assertions are optional on the left hand side of `def` clauses, as the type of the value bound to the identifier is always deducible from the expression on the right hand side.
-
-The expression on the right hand side of a constant definition may depend only on identifiers bound to constants. Similarly, the expression on the right hand side of a parameter definition may depend only on identifiers bound to constants or other parameters.
-
-
-*TODO* Move to appendix
-### Alternative function and type alias syntax
-
-The forms for function and type alias definitions above are quite different from earlier proposals; these are reprised here if the new proposed forms are rejected:
-
-> _function-defn_ ::= `function` ***symbol*** _argument-list_ ( `->` _type-expr_ )* `{` _expression_ `}`
-
-Type definitions are only for record types:
-
-> _type-alias_ ::= `record` ***symbol*** `{` ( _type-expr_ ***symbol*** `;` )\* `}`
-
-### Parameter semantics
-
-A parameter definition introduces a new identifier in module scope, together with a default value. Parameters can be used in any following expression within the module.
-The expression to which a parameter is bound may not include identifiers that are bound in an interface to external quantities, but may include other parameters.
-
-Parameters that are exported in an interface can be bound to a user supplied value externally; they are nonetheless constant. In any expression in the same module scope that uses that parameter, the value of the parameter will be the user supplied value. This applies to expressions that are bound to other parameters — for example, consider the following module and interface definition.
+Parameters that are exported in an interface can be bound to a user supplied value externally; they are otherwise constant. In any expression in the same module scope that uses that parameter, the value of the parameter will be the user supplied value. This applies to expressions that are bound to other parameters — for example, consider the following module and interface definition.
 
 ```
 module impl {
-    parameter voltage a = 3 mV;
-    parameter current I = (13 mV - a) / 20 kΩ;
+    parameter a: voltage = 3 mV;
+    parameter I: current = (13 mV - a) / 20 kΩ;
 }
 
 interface point "foo" {
@@ -1033,7 +1028,87 @@ interface point "foo" {
 
 Models using the "foo" mechanism can set the parameter `a` to some voltage. If it remains unset, the mechanism supplies a non-specific current of 0.5 μA; if the model sets the parameter `a` to -7 mV, the parameter `I` in the `impl` module will have the value 1.0 µA, which will in turn be the supplied non-specific current.
 
+#### Constant and function definitions
+<a id="constant-and-function-definitions"/>
+
+**TODO**
+
+The expression on the right hand side of a constant definition may depend only on identifiers bound to constants.
+
+
+### Interface definition
+<a id="interface-definition"/>
+
+> _interface-defn_ ::= `interface` _interface-class_ _string-literal_ `{` _interface-decl_* `}`
+>
+> _interface-class_ ::= `density` | `discrete` | `concentration`
+>
+> _interface-decl_ ::= _module-decl_ | _export_ | _export-parameter-defn_ | _interface-binding_ | _effect-defn_ | _initial-defn_ | _regime-defn_ | _regime-decl_
+>
+> _export_ ::= `export` _export-qualifier_* `parameter` _qualified-identifier_ _type-assertion_? ( `as` ***symbol*** )?
+>
+> _export-parameter-defn_ ::= `export` _export-qualifier_* _parameter-defn_
+>
+> _export-qualifier_ ::= `density`
+>
+> _interface-binding_ ::= `bind` _identifer_ _type-assertion_? = _bindable-state_ `;`
+>
+> _bindable-state_ ::= `state` | `membrane` `potential` | `temperature` | (`current` `density` | `molar` `flux`) _species-name_ | (`internal` | `external`) `concentration` _species-name_ | `charge` _species-name_
+>
+> _initial-defn_ ::= `initial` ( `regime` _qualified-identifier_ )? ( _initial-post-expr_ `from` )? `state` _type-assertion_? `=` _expression_ `;`
+>
+> _initial-post-expr_ ::= `steady` | `evolve` `for` _expression_
+>
+> _regime-defn_ ::= `regime` _identifier_ `{` ( _regime-decl_ | _regime-defn_ )* `}`
+>
+> _regime-decl_ ::= _evolve-defn_ | _when-defn_ | _effect-defn_
+>
+> _evolve-defn_ ::= `evolve` `explicit`? `state'` _type-assertion_? `=` _expression_ `;`
+>
+> _when-defn_ ::= `when` _when-condition_ `;` ( `regime` _qualified-identifier_ )? `state` `=` _expression_ `;`
+>
+> _when-condition_ ::= _boolean-expr_ | _identifier_ _type-assertion_ = _external-event_
+>
+> _external-event_ ::= `event` | `post`
+>
+> _effect-defn_ ::= `effect` _effect_ = _expression_ `;`
+>
+> _effect_ ::= `current` `density` _species-name_? | `molar` `flow` `rate` _species-name_ | `current` _species-name_? | `molar` `flux` _species-name_ | (`internal` | `external`) `concentration` _species-name_
+>
+> _species-name_ ::= ***string-literal***
+
+Definitions and bindings in interface definitions, much like in modules, have module scope. In addition to the restriction on rebinding identifiers in module scope, interface declarations have the following restrictions:
+
+* The same identifier cannot be bound with `bind` more than once.
+
+* The safe _effect_ can not be defined more than once.
+
+
+#### Initial definition
+
+ **TODO**
+
+The value bound to `state` in an _initial-defn_ must be of a record or quantity type.
+
+#### When definitions
+
+**TODO**
+ 
+When a `when` clause is given a boolean expression (as opposed to an external event), that expression must have type boolean.
+
+
 # Refactor from here
+
+*TODO* Move to appendix
+### Alternative function and type alias syntax
+
+The forms for function and type alias definitions above are quite different from earlier proposals; these are reprised here if the new proposed forms are rejected:
+
+> _function-defn_ ::= `function` ***symbol*** _argument-list_ ( `->` _type-expr_ )* `{` _expression_ `}`
+
+Type definitions are only for record types:
+
+> _type-alias_ ::= `record` ***symbol*** `{` ( _type-expr_ ***symbol*** `;` )\* `}`
 
 **TODO**
 
