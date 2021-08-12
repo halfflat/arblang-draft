@@ -499,7 +499,7 @@ Every expression has a type, which is either:
 
 A type expression _type-expr_ identifies a particular type, and is used in type assertions and function argument specifiers. Function types have no corresponding type expression: expressions of a function type may only be bound to an identifier or used in a function application expression. In particular, they may not be used as an argument in a function application.
 
-A _type-expr_ is either `boolean`, a quantity term, a record type description, or a (qualified) identifier bound to a type expression by a type alias.
+A _type-expr_ is either `boolean`, a quantity term, a record type description, or a (qualified) identifier bound to a type expression by a [type alias](#type-aliases).
 
 > _type-expr_ ::= `boolean` | _quantity-term_ | _record-type-expr_ | _qualified-identifier_
 
@@ -1016,14 +1016,28 @@ is not, as `M` is being rebound in module scope in an expression context.
 
 
 #### Type aliases
+<a id="type-aliases"/>
 
-**TODO**
+A type alias binds a non-function type to an identifier in module scope, in type contexts. In addition, if the bound type is a record or quantity type, the derivative type of the bound type is bound to the identifier suffixed with an apostrophe `'` (or equivalently, any of the accepted prime marks).
 
-(Don't forget to mention derivative syntax for type aliases)
+Example:
+```
+type foo = metre;
+type bar = { a: time; b: foo };
+
+# type aliases used to assert type in constant definitions:
+def r: foo = 10 m;
+def s: bar = { a = 3 s; b = 20 m; };
+
+# derivative type aliases are bound implicitly:
+def r': foo' = 1 m/s;
+def s': bar' = { a' = 1.2; b' = 3.4 m/s; };
+
+```
 
 #### Parameters
 
-A parameter definition introduces a new identifier in module scope, together with a default value. Parameters can be used in any following expression within the module. The expression to which a parameter is bound may not include identifiers that are bound in an interface to external quantities, but may include other parameters.
+A parameter definition introduces a new identifier in module scope, in expression contexts, together with a default value given by a _paramater-constant_ expression — that is, the expression can depend only upon constants and other parameters (see [Expressions](#expressions)).
 
 Parameters that are exported in an interface can be bound to a user supplied value externally; they are otherwise constant. In any expression in the same module scope that uses that parameter, the value of the parameter will be the user supplied value. This applies to expressions that are bound to other parameters — for example, consider the following module and interface definition.
 
@@ -1046,8 +1060,19 @@ Models using the "foo" mechanism can set the parameter `a` to some voltage. If i
 #### Constant and function definitions
 <a id="constant-and-function-definitions"/>
 
-**TODO**
+The `def` keyword introduces new bound identifiers in module scope, in expression contexts.
 
+Function definitions may not take a type assertion, but constant definitions may. For constant definitions, the bound value must be a _constant-expression_ (see [Expressions](#expressions)).
+
+```
+def a: length = 10 m;       # Constant definition.
+def sq = fn (x: real) → x²  # Function definition.
+
+parameter P = 1.23;
+
+# The following definition is ill-formed, as the bound expression depends upon a parameter, and so is not a constant expression.
+def b: real = 2*sq(P);
+```
 
 ### Interface definition
 <a id="interface-definition"/>
@@ -1068,7 +1093,7 @@ Models using the "foo" mechanism can set the parameter `a` to some voltage. If i
 >
 > _bindable_ ::= `state` | `membrane` `potential` | `temperature` | (`current` `density` | `molar` `flux`) _species-name_ | (`internal` | `external`) `concentration` _species-name_ | `charge` _species-name_
 >
-> _initial-defn_ ::= `initial` ( `regime` _qualified-identifier_ )? ( _initial-post-expr_ `from` )? `state` _type-assertion_? `=` _expression_ `;`
+> _initial-defn_ ::= `initial` ( `regime` `=` _qualified-identifier_ `;` )? ( _initial-post-expr_ `from` )? `state` _type-assertion_? `=` _expression_ `;`
 >
 > _initial-post-expr_ ::= `steady` | `evolve` `for` _expression_
 >
@@ -1078,9 +1103,9 @@ Models using the "foo" mechanism can set the parameter `a` to some voltage. If i
 >
 > _evolve-defn_ ::= `evolve` `explicit`? `state'` _type-assertion_? `=` _expression_ `;`
 >
-> _when-defn_ ::= `when` _when-condition_ `;` ( `regime` _qualified-identifier_ )? `state` `=` _expression_ `;`
+> _when-defn_ ::= `when` _when-condition_ ( `regime` = _qualified-identifier_ `;` )? `state` `=` _expression_ `;`
 >
-> _when-condition_ ::= _boolean-expr_ | _identifier_ _type-assertion_ = _external-event_
+> _when-condition_ ::= _boolean-expr_ | _identifier_ _type-assertion_ = _external-event_ `;`
 >
 > _external-event_ ::= `event` | `post`
 >
@@ -1114,134 +1139,68 @@ If the interface has no _initial-definition_ at all, the initial state is define
 
 A regime defines the dynamical evolution of the mechanism state. There is always a top-level, unnamed regime, but more regimes can be introduced with a _regime-defn_. Associated with each regime is an evolution definition and a set of conditions that determine behaviour upon an external event or the satisfaction of some predicate.
 
-**TODO** --- continue.
- 
-When a `when` clause is given a boolean expression (as opposed to an external event), that expression must have type boolean.
+A regime definition introduces a new regime scope: inner regimes may be given names that mask outer regime names, and regime transitions in `when` clauses can refer to regimes defined in outer scopes without further qualification. A transition can also refer to a regime in the interface by using a qualified identifer:
 
+```
+regime A {
+    regime B {
+        regime C {
+        }
+    }
 
-# Refactor from here
+    regime D {
+        # regime B is defined in outer scope.
+        when p(state) regime = B.C; state = f(state);
+    }
+}
 
-*TODO* Move to appendix
-### Alternative function and type alias syntax
+regime E {
+    # regime A is defined in outer scope.
+    when q(state) regime = A.D; state = g(state);
+}
+```
 
-The forms for function and type alias definitions above are quite different from earlier proposals; these are reprised here if the new proposed forms are rejected:
+If an evolution is not specified in a regime, the evolution will be that of the outer regime.
+The topmost unnamed regime will implicitly define an evolution if none is provided: this implicit evolution will hold the state constant over time.
 
-> _function-defn_ ::= `function` ***symbol*** _argument-list_ ( `->` _type-expr_ )* `{` _expression_ `}`
+Any `when` conditions defined in an outer regime, including the topmost unnamed regime, still apply in inner regimes.
 
-Type definitions are only for record types:
+#### When semantics
 
-> _type-alias_ ::= `record` ***symbol*** `{` ( _type-expr_ ***symbol*** `;` )\* `}`
+When clauses are triggered when the mechanism state satisfies the corresponding predicate, or when an event of the appropriate type is delivered to the mechanism. The state is updated according to the `state = ` clause, and if a `regime` clause is present, the dynamics are shifted to the given regime.
+
+A given when clause associated with a regime _R_, with predicate _p_ applies at the point in time _t₁_ if the dynamnics are in regime _R_ at _t₁_, _p_(_t₁_) is true and either _p_(_t_) is false or dynamics were in a regime _R'_ without this when clause for _t_ ∈ (_t₁_-δ, _t₁_) for some δ>0. All predicates are considered false for _t_ &lt; 0.
+
+If more than one when clause applies, they are applied in order of definition. Note that the effect of a when clause may cause a transition to a regime where the set of applicable when-clauses differs, whence the new set is considered in its stead. In any instance, no single when clause may be triggered more than once by the same event or, for predicate-based when clauses, at the same time.
+
+Consider the following situation:
+```
+initial regime X state = 0;
+
+regime X {
+    when ev = event; state = 1;    # (A)
+    when ev = event; regime = Y; state = 2; # (B)
+    when ev = event; state = 3;    # (C)
+    when state == 4 regime = Y; state = 5; # (D)
+}
+
+regime Y {
+    when true regime = X; state = 4; # (E)
+}
+```
+
+On the first event, when clauses (A) and (B) will be triggered, transitioning to regime Y with state equal to 2. At this point, the event has been handled. However the clause (E) becomes applicable as soon as the evolution is considered, and state is set to 4, and regime transitions back to X. Clause (D) now applies, setting state to 5, and transitioning back to regime Y. However clause (E) has already been triggered at this time, and so cannot be applied again.
+
+#### Evolution
+
+**TODO**
+
+#### Effects
 
 **TODO**
 
 
-### Alternative concentration model
-
-There are a couple of problems with specifying concentration evolution with concentration models as outlined above:
-* Concentration models cannot be combined for any given species.
-* Initial concentration is determined by the model, disregarding any user-supplied initial concentration data.
-
-A cleaner approach would be to present a concentration model in terms of the change in concentration over time. Then the initial value would be user-specified, and multiple concentration model contributions could overlap.
-
-Example, concentration model:
-```
-interface concentration "CaDynamics" {
-    export parameter real gamma = 0.5;
-    export parameter time decay = 80 ms;
-    export parameter length detph = 0.1 µm;
-    export parameter concentration steady_conc = 1.0e-4 mmol/L;
-
-    initial state = steady_conc;
-
-    bind ca_conc = state;
-    bind ca_flux = molar flux "ca";
-    evolve state' = -ca_flux*gamma/depth - (ca_conc-steady_conc)/decay;
-
-    effect internal concentration "ca" = ca_conc;
-}
-```
-
-Alternative concentration rate model:
-```
-interface concentration "CaDynamics" {
-    export parameter real gamma = 0.5;
-    export parameter time decay = 80 ms;
-    export parameter length detph = 0.1 µm;
-    export parameter concentration steady_conc = 1.0e-4 mmol/L;
-
-    bind ca_flux = molar flux "ca";
-    bind ca_conc = internal concentration "ca";
-    effect internal concentration rate "ca" =
-            -ca_flux*gamma/depth - (ca_conc-steady_conc)/decay;
-}
-```
-
-The alternative model could have been split into two different models, to be applied over the same regions:
-```
-interface concentration "CaUnbuffered" {
-    export parameter real gamma = 0.5;
-    export parameter length depth = 0.1 µm;
-
-    bind ca_flux = molar flux "ca";
-    effect internal concentration rate "ca" = -ca_flux*gamma/depth;
-}
-
-interface concentration "CaBuffered" {
-    export parameter concentration steady_conc = 1.0e-4 mmol/L;
-    export parameter time decay = 80 ms;
-
-    bind ca_conc = internal concentration "ca";
-    effect internal concentration rate "ca" = -(ca_conc-steady_conc)/decay;
-}
-```
-
-
-
 # Appendices
-
-## Extension: offset values and affine spaces
-<a id="extension-offset-values-and-affine-spaces"/>
-
-*TODO* Discussion of how to handle units like °C.
-#### Notes
-
-*TODO* Actually, just toss °C and rewrite below as proposed extension.
-
-| **TODO**: Put this under expressions below, in subsection _Offset value arithmetic_.
-| 
-| There is one unit, degrees Celsius °C, which is not zero-based. Depending on context, a value expressed as _x_ °C may represent an absolute temperature, viz. (_x_+273.15) kelvin, or a temperature difference of _x_ kelvin. To avoid confusion, it is recommended that any arblang source only use °C to represent the former. For the interpretation of arblang, there are three chief possibilities, in order of increasing sophistication:
-| 
-| 1. Simplest: always automatically convert _x_ °C to (_x_+273.15) kelvin. Use of a Celsius temperature literal in non-absolute contexts is an unflagged semantic error.
-| 2. Conservative contextual approach: subtraction is always regarded as representing a difference, so that two compatible offset or offset-free values may be subtracted, giving an offset-free value; an offset value may be the left hand summand in an addition with a compatible non-offset value, giving an offset value. All other arithmetical expressions constitute a type error.
-| 3. Fully contextual approach: as above, save that an offset value has its offset ignored in any arithmetical expression _except_ when it is an operand in a subtraction, or is the left hand summand in an addition.
-| 
-| Examples for the different interpretations, writing _x_ ⊕ _y_ for an internal representation of a value with implicit offset _y_:
-| 
-| | Expression      | Simple    | Conservative    | Full contextual |
-| |-----------------|-----=-----|-----------------|-----------------|
-| | 1 °C            | 274.15 K  | (1 ⊕ 273.15) K  | (1 ⊕ 273.15) K  |
-| | 1 °C + 3 K      | 277.15 K  | (4 ⊕ 273.15) K  | (4 ⊕ 273.15) K  |
-| | 1 °C - 3 °C     | -2 K      |  -2 K           | -2 K            |
-| | 280.15 K + 3 °C | 283.14 K  |  _error_        | 283.15 K        |
-| | 280.15 K - 3 °C | -2 K      |  _error_        | -2 K            |
-| | 1 °C + 3 °C     | 550.30 K  |  _error_        | (4 ⊕ 273.15) K  |
-| | 1 °C / 2        | 137.075 K |  _error_        | 0.5 K           |
-| 
-| All three approaches can lead to surprsing behaviour, given the differences in interprertation between addition and subtraction with offset-bearing quantities. The best approach might be to remove the °C unit altogether.
-| 
-
-## Extension: fractional units and quantities
-
-*TODO* (But basically: allow factions as superscript powers and constant rational expressions as exponents; algebra of quantities is extended accordingly.)
-
-## Extension: range-limited quantities
-
-*TODO* Extending type hierarchy to range-limited quantities.
-
-#### Notes
-
-The sub-/supertype relationships could be extended to support quantities with a restricted range, exposed in the syntax by an extension of the _type-assertion_ syntax. For example, the simplest sort of constraint, that a value be within some fixed interval, could be represented by syntax such as `a: (-10 m, ∞ m) length`.
-
 
 ## Magic keywords and interface extension points
 
@@ -1254,4 +1213,143 @@ Within an interface block, there are specific points within the permitted syntax
 5. Left hand side of `evolve`, where the keyword `explicit` might be replaced with other possible descriptions, such as `implicit` for implicit ODE or DAE systems, and also where `state'` forms left hand side of the final binding.
 6. Left hand side of `export`, where we have `density parameter` or `parameter`, but which could be extended to support for example the exposure of derived values to probe requests or similar.
 
-**TODO:** Add examples of possible syntax extensions in these cases.
+In addition, the set of possible interface classes can be extended. An example would be to add stateful gap junctions.
+
+## Alternative concentration model
+
+The concentration models described in [Mechanism semantics](#mechanism-semantics) are defined in terms of flow contributions, rather than in absolute concentrations, which is a departure from the NEURON NMODL approach.
+
+The NEURON approach has some limitations: initial concentration must be supplied by the mechanism model, not the cell description; and all contributions to concentration evolution must be combined within the one mechanism, because different concentration writing mechanisms cannot overlap. Nonetheless, the flow based description
+
+```
+interface concentration "CaDynamics" {
+    export parameter gamma: real = 0.5;
+    export parameter decay: time = 80 ms;
+    export parameter detph: length = 0.1 µm;
+    export parameter steady_conc: concentration = 1.0e-4 mmol/L;
+
+    bind ca_flux = molar flux "ca";
+    bind ca_conc = internal concentration "ca";
+    effect internal concentration rate "ca" = -ca_flux*gamma/depth - (ca_conc-steady_conc)/decay;
+}
+```
+
+might be represented in a direct concentration model as
+
+```
+    export parameter gamma: real = 0.5;
+    export parameter decay: time = 80 ms;
+    export parameter detph: length = 0.1 µm;
+    export parameter steady_conc: concentration = 1.0e-4 mmol/L;
+
+    initial state = steady_conc;
+
+    bind ca_conc = state;
+    bind ca_flux = molar flux "ca";
+    evolve state' = -ca_flux*gamma/depth - (ca_conc-steady_conc)/decay;
+
+    effect internal concentration "ca" = ca_conc;
+```
+
+## Alternative function and type alias syntax
+
+Alternatives for function definition:
+
+> _function-defn_ ::= `function` ***symbol*** _argument-list_ _type-assertion_? = _expression_ `;`
+>
+> _function-defn_ ::= `function` ***symbol*** _argument-list_ _type-assertion_? { _expression_ }
+
+Alternative for type aliases for record types:
+
+> _type-alias_ ::= `record` ***symbol*** `{` _field-defn_* `}`
+
+## Offset units
+
+Physical quantities can represent an absolute value, or a difference between absolute values. With an implicit identification between the two that takes an absolute value of zero to a zero difference, a single quantity can be used unambiguously in both contexts.
+
+If a quantity can be represented by different units which differ not just in scale but also in what their zero value reperesents as an absolute value, then only one of these units can be used to transparently represent both absolues and differences: the other unit must be converted by scaling in a difference context, but by scaling and an additive offset in an absolute value context.
+
+For arblang, this is the situation which arises if we have a unit such as degrees Celsius in addition to kelvin. Taking the zero kelvin as the zero base, a value in degrees Celsius must be translated when representing an absolute temperature, but not when representing a difference or displacement.
+
+Additive expressions involving quantities can be regarded as operations in affine space, with an implicit map between the vector space of translations and the affine space determined by a choice of origin. By convention, an expression _a_+_v_ in an affine space describes the action of a displacement _v_ on the point _a_, while _a_-_b_ describes the displacement _v_ that takes _b_ to _a_. Similarly, displacements can be multiplied by a scaling factor, but points in the affine space cannot. Putting this convention in place for arithmeitic epxression in arblang:
+
+1. _a_ + _b_ : translate _a_ to zero-based value and interpret _b_ as a displacement, e.g. 30 °C + 10 °C = 30 °C + 10 K = 303.15 K + 10 K = 313.15 K.
+2. _a_ - _b_ : translate _a_ and _b_ to zero-based values and take difference, e.g.  30 °C - 10 °C = 303.15 K - 283.15 K = 20 K.
+3. _a_ * _c_ : interpret _a_ as a displacent and multiply by _c_, e.g. 30 °C * 3 Hz = 30 K * 3 Hz = 90 K/s.
+
+There are circumstances where this might be surpising: 30 °C - 2 K won't equal 28 °C. User code that uses units such as °C would have to be careful to write e.g. 30 °C + -2 K or similar, if that is the desired interpretation.
+
+Implementation: a quantity value is represented not just by a magnitude and scale relative to an implicit base unit, but also with an offset. Writing the tuple as (_m_, _s_; _δ_) for magnitude, scale and offset, addition and subtraction between compatible quantities would proceed as the following, or equivalent:
+
+1. (_m₁_, _s₁_; _δ₁_) + (_m₂_, _s₂_; _δ₂_) = (_m₁_ + _m₂_·(_s₁_/_s₂_), _s₁_; _δ₁_) or ((_m₁_·_s₁_-_δ₁_)/_s₂_ + _m₂_, _s₂_; 0).
+2. (_m₁_, _s₁_; _δ₁_) - (_m₂_, _s₂_; _δ₂_) = ((_m₁_·_s₁_-_δ₁_) - (_m₂_·_s₂_-_δ₂_), 1; 0).
+
+Scales themselves would comprise a power of ten exponent and, if non-metric units are accommodated, an additional normalized scaling factor.
+
+
+## Fractional powers for quantities and units
+
+Rational powers of units and quantities can be mathematically and physically sound; in CGS electrostatic units, for example, charge has physical dimension M^(1/2)L^(3/2)T^(-1) with units 1 Fr = 1 dyn^(1/2)·cm.
+
+The grammar for unit and quantity expressions could be extended to permit rational powers and parentheses, and the dimensional representation of quantities can be extended to permit rational powers, not just integral powers. There is, unfortunately, no Unicode character that can semantically and visually represent a superscript slash for the purposes of writing a rational exponent as a superscript literal.
+
+## User-defined units
+
+User-defined units can be accommodated with a bit more syntax, and new identifier context. A simple proposal:
+
+* The units with metric prefixes defined in [Quantities](#quantities) are pre-defined identifiers in the new unit context.
+* A unit definition can be made in module scope that binds an identifier in this context to a scaled combination of already defined units.
+* A keyword in the definition allows that the new unit may take the standard set of metric prefixes.
+
+Example:
+```
+unit metric dyn = 10⁻⁵ N;
+
+def nothing: force/length = 1 N/m - 1 kdyn/cm;
+```
+
+## Range-limited quantities
+
+The type hierarchy could be extended to accommodate quantities of limited range. In addition to the subtype relationship on record types, one would have that a limited quantity of physical dimension _D_ and range _R_ is a subtype of another quantity of dimension _D'_ and range _R'_ iff _D_=_D'_ and _R_⊂_R'_.
+
+Possible syntax:
+
+> _type-expr_ ::= `boolean` | _quantity-expr_ | _record-type-expr_ | _qualified-identifier_
+>
+> _quantity-expr_ ::= _range-limit_? _quantity-term_
+>
+> _range-limit_ ::= `[` _quantity-literal_ `,` _quantity-literal `]`
+
+(Where we add two new punctuation tokens for `[` and `]`.)
+
+Example:
+
+```
+type branch_length = [0 mm, 20 mm] length;
+
+def arctanh = fn (x: [-1, 1] real) → 1/2 · ln((1+x)/(1-x));
+
+def branch_scale = fn (L: branch_length) → arctanh(L/20 mm);
+```
+
+The term `L/20 mm` can have its type deduced to be `[0, 1] real`, which is a subtype of the `[-1, 1] real` argument to `arctanh`.
+
+Alternatively, as the quantity can be deduced from the literals in the interval, the syntax could simply be:
+
+> _quantity-expr_ ::= _range-limit_ | _quantity-term_
+>
+> _range-limit_ ::= `[` _quantity-literal_ `,` _quantity-literal `]`
+
+making the example look like:
+
+```
+type branch_length = [0 mm, 20 mm];
+
+def arctanh = fn (x: [-1, 1]) → 1/2 · ln((1+x)/(1-x));
+
+def branch_scale = fn (L: branch_length) → arctanh(L/20 mm);
+```
+
+The derivative of a range-limited quantity would lose the range limit. In general, the type of an expression involving range-limited quantities would have the range deduced via interval arithmetic.
+
+
