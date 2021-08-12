@@ -873,7 +873,7 @@ A _comparison-expr_ of the form `expr₁ == expr₂` or `expr₁ ≠ expr₂` is
 
 A _comparison-expr_ of the form `expr₁ op expr₂` where `op` is not `==` nor `≠` is well-defined iff `expr₁` and `expr₂` have the same quantity type.  The comparison operators `≥`, `>`, `≤`, `<` respect the usual ordering on real numbers, after applying any requisite scaling to equate units.
 
-When a _comparison-expr_ `expr₁ op expr₂` compares two terms of the same quantity type which may carry an offset value from a non-zero based unit, the value is equivalent to `expr₁ - expr₂ op zero` where `zero` is a zero-valued quantity of the same type as `expr₁`. See _Offset value arithmetic_ below.
+When a _comparison-expr_ `expr₁ op expr₂` compares two terms of the same quantity type which may carry an offset value from a non-zero based unit, the value is equivalent to `expr₁ - expr₂ op zero` where `zero` is a zero-valued quantity of the same type as `expr₁`. See [Offset units](#offset-units) below.
 
 A _boolean-expr_ may not involve any boolean or comparison operations, and be equivalently parsed as an algebraic expression. In this instance, its type and value is the same as if it were parsed directly as an algebraic expression.
 
@@ -891,7 +891,7 @@ A _boolean-expr_ may not involve any boolean or comparison operations, and be eq
 
 Additive operators `+` and `-` and multiplicative operators `*` (or `·`) and `/` are all left associative. Multiplicative operators have higher precedence than additive operators.
 
-An additive expression of the form `expr₁ + expr₂` or `expr₁ - expr₂` is well formed iff `expr₁` and `expr₂` have the same quantity type. The expression has the same quantity type, with the value corresponding to the regular arithmetic operation after any requisite scaling to equalize units. For values that may carry an offset from a non-zero based unit, refer to _Offset value arithmetic_ below.
+An additive expression of the form `expr₁ + expr₂` or `expr₁ - expr₂` is well formed iff `expr₁` and `expr₂` have the same quantity type. The expression has the same quantity type, with the value corresponding to the regular arithmetic operation after any requisite scaling to equalize units. For values that may carry an offset from a non-zero based unit, refer to [Offset units](#offset-units) below.
 
 A multiplicative expression of the form `expr₁·expr₂` or `expr₁/expr₂` is well defined if `expr₁` and `expr₂` have types _T₁_ and _T₂_ respectively, both of which are quantity types. The resultant type is the quantity-type _T₁·T₂_ or _T₁/T₂_ accordingly.
 
@@ -1137,7 +1137,7 @@ If the interface has no _initial-definition_ at all, the initial state is define
 
 #### Regime definitions
 
-A regime defines the dynamical evolution of the mechanism state. There is always a top-level, unnamed regime, but more regimes can be introduced with a _regime-defn_. Associated with each regime is an evolution definition and a set of conditions that determine behaviour upon an external event or the satisfaction of some predicate.
+A regime defines the dynamical evolution of the mechanism state, and the effects of the mechanism state on the cellular state. There is always a top-level, unnamed regime, but more regimes can be introduced with a _regime-defn_. Associated with each regime is an evolution definition and a set of conditions that determine behaviour upon an external event or the satisfaction of some predicate.
 
 A regime definition introduces a new regime scope: inner regimes may be given names that mask outer regime names, and regime transitions in `when` clauses can refer to regimes defined in outer scopes without further qualification. A transition can also refer to a regime in the interface by using a qualified identifer:
 
@@ -1160,8 +1160,7 @@ regime E {
 }
 ```
 
-If an evolution is not specified in a regime, the evolution will be that of the outer regime.
-The topmost unnamed regime will implicitly define an evolution if none is provided: this implicit evolution will hold the state constant over time.
+If an evolution is not specified in a regime, the evolution will be that of the outer regime. Similarly, any effects defined in an an outer regime will apply, if the same effect is not defined within the inner regime. The topmost unnamed regime will implicitly define an evolution if none is provided: this implicit evolution will hold the state constant over time.
 
 Any `when` conditions defined in an outer regime, including the topmost unnamed regime, still apply in inner regimes.
 
@@ -1264,6 +1263,7 @@ Alternative for type aliases for record types:
 > _type-alias_ ::= `record` ***symbol*** `{` _field-defn_* `}`
 
 ## Offset units
+<a id="offset-units"/a>
 
 Physical quantities can represent an absolute value, or a difference between absolute values. With an implicit identification between the two that takes an absolute value of zero to a zero difference, a single quantity can be used unambiguously in both contexts.
 
@@ -1281,7 +1281,7 @@ There are circumstances where this might be surpising: 30 °C - 2 K won't equal 
 
 Implementation: a quantity value is represented not just by a magnitude and scale relative to an implicit base unit, but also with an offset. Writing the tuple as (_m_, _s_; _δ_) for magnitude, scale and offset, addition and subtraction between compatible quantities would proceed as the following, or equivalent:
 
-1. (_m₁_, _s₁_; _δ₁_) + (_m₂_, _s₂_; _δ₂_) = (_m₁_ + _m₂_·(_s₁_/_s₂_), _s₁_; _δ₁_) or ((_m₁_·_s₁_-_δ₁_)/_s₂_ + _m₂_, _s₂_; 0).
+1. (_m₁_, _s₁_; _δ₁_) + (_m₂_, _s₂_; _δ₂_) = (_m₁_ + _m₂_·(_s₂_/_s₁_), _s₁_; _δ₁_) or ((_m₁_·_s₁_-_δ₁_)/_s₂_ + _m₂_, _s₂_; 0).
 2. (_m₁_, _s₁_; _δ₁_) - (_m₂_, _s₂_; _δ₂_) = ((_m₁_·_s₁_-_δ₁_) - (_m₂_·_s₂_-_δ₂_), 1; 0).
 
 Scales themselves would comprise a power of ten exponent and, if non-metric units are accommodated, an additional normalized scaling factor.
