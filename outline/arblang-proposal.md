@@ -1265,9 +1265,31 @@ interface density "Kv3" {
     initial state = { m = minf(v); };
     evolve state' = with state; { m' = (minf(v) - m)·mrate(v); };
 
-    effect current density "k" = gbar*(v-ek);
+    effect current density "k" = gbar*state.m*(v-ek);
 }
 ```
+
+As the state comprises only a single field, an alternative presentation uses just a real value for state:
+```
+interface density "Kv3" {
+    bind v = membrane potential;
+
+    def minf = fn (v: voltage) → 1/(1 + exp(-(v - 18.7 mV)/9.7 mV);
+    def mrate = fn (v: voltage) → 0.25 ms⁻¹ * (1+ exp(-(v + 46.56 mV)/44.14 mV));
+
+    export density parameter gbar = 10⁻⁵ S/cm²;
+    export parameter ek = -88 mV;
+
+    initial state: real = minf(v);
+
+    bind m = state;
+    evolve state' = (minf(v) - m)·mrate(v);
+
+    effect current density "k" = gbar*m*(v-ek);
+}
+```
+
+
 
 #### Effects and external bindings
 
@@ -1318,7 +1340,7 @@ In addition, the set of possible interface classes can be extended. An example w
 
 ## Default modules
 
-Rather than having functions such as `exp` and constant such as `π` bound by default in module scopes, built-in functions and constants could be moved to a module that is always provided by the environment. This module name can be freely chosen, but suggestions have included: `common`, `std`, `prelude`. `Arblang` is another possibility.
+Rather than having functions such as `exp` and constant such as `π` bound by default in module scopes, built-in functions and constants could be moved to a module that is always provided by the environment. This module name can be freely chosen, but suggestions have included: `common`, `std`, `prelude`. `arblang` is another possibility.
 
 Importing many constants or functions from a module may be tedious: either the qualified name is used, or each must be introduced via a `def` or `let` binding. A possible extension to Arblang would be to permit `with M;` to introduce local bindings for all constants and functions defined in a module imported as _M_, in an expression scope.
 
