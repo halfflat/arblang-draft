@@ -282,7 +282,7 @@ The value of a ***string-literal*** token does _not_ undergo NFKC normalization,
 > _punctuation_ ::=
 >     ***plus-sign*** | ***minus-sign*** | ***multiplication-dot*** | ***division-slash*** | ***exponent-op*** | ***preferential-union*** |
 >     ***compare-equal*** | ***compare-not-equal*** | ***compare-less*** | ***compare-less-eqaul*** | ***compare-greater*** | ***compare-greater-eqaul*** |
->     ***left-arrow*** | ***right-arrow*** | ***right-left-arrow*** | ***empty-set***
+>     ***left-arrow*** | ***right-arrow*** | ***right-left-arrow*** | ***empty-set*** | ***square-root*** |
 >     ***assign-equal*** | ***semicolon*** | ***left-paren*** | ***right-paren*** | ***left-brace*** | ***right-brace*** |
 >     ***colon*** | ***bar*** | ***comma*** | ***period***
 
@@ -321,6 +321,8 @@ Punctuation token definitions:
 > ***right-left-arrow*** ::= `<->` | U+21C4 `⇄` RIGHT ARROW OVER LEFT ARROW
 
 > ***empty-set*** ::= `\0` | U+2205 `∅` EMPTY SET
+
+> ***square-root*** ::= U+221A `√` SQUARE ROOT
 
 > ***assign-equal*** ::= `=`
 
@@ -679,6 +681,23 @@ Note that the non-SI unit 'molar' is equal to 1 mol/L.
 
 As a possible extension, arblang might support non-zero based units such as degrees Celsius °C. Doing so, however, complicates the algebra; refer to the [appendix](#extension-offset-values-and-affine-spaces).
 
+#### Magnitudes
+
+The magnitude of a quantity is a member of an extended real number set _R_, where _R_ = ℝ ∪ {-∞, +∞} ∪ {⊥}. Positive and negative infinity describe the extrema in the order completion of the reals, while ⊥ represents the 'not a number' value. Any partial function _f_: ℝ → ℝ can be extended a total function _f⁺_: _R_ → _R_ by:
+
+1. _f⁺_(_x_) = _f_(_x_) for all _x_ in the domain of _f_.
+2. _f⁺_(⊥) = ⊥
+3. For _a_ equal to ∞, -∞, or in the complement of the domain of _f_, if lim _x_→_a_ _f_(_x_) = _L_ for _L_ in ℝ or where _L_ is ∞ or -∞, then _f⁺_(_a_) = _L_ in _R_. Otherwise, _f⁺_(_a_) = ⊥.
+
+Functions of more than one variable are extended similarly. Arithmetic operations are extended as usual to ℝ ∪ {-∞, ∞}, with the value of indeterminie forms taking the value ⊥. The value of any expression involving ⊥ is ⊥.
+
+When interpreted or compiled into an Arbor mechanism, _R_ and operations upon it will necessarily be approximated in some manner; IEEE 754 semantics are a reasonable expectation, with NaN representing ⊥, but the interpreter or transpiler is permitted to perform algebraic simplifications including:
+
+1. Reordering of associative operations.
+2. Constant folding.
+3. Algebraic elimination of terms (which may change the value of some expressions from ⊥ to a value in ℝ ∪ {-∞, ∞}, or from an infinite value to a finite value).
+
+
 ### Records
 <a id="records"/>
 
@@ -740,7 +759,7 @@ A reaction may be a _right-reaction_, a _left-reaction_, or a _right-left-reacti
 
 In a record literal, each species _a_ present in any reaction clause complex will generate a field definition for the field named _a'_. The identifier _a_ will represent a species concentration, and _α'_ its rate of change.
 
-Consider the normalized representation of the set of reaction clauses, where each is represented by one or two right reactions of the form _Lᵢ → Rᵢ (κᵢ)_, where are _Lᵢ_ and _Rᵢ_ are complex. Let Π*C* denote the product with multiplicity of the species terms in a complex *C*, and *μ*(*α*; *C*) the multiplicity of a species _α_ in _C_.
+Consider the normalized representation of the set of reaction clauses, where each is represented by one or two right reactions of the form _Lᵢ → Rᵢ (κᵢ)_, where are _Lᵢ_ and _Rᵢ_ are complexes. Let Π*C* denote the product with multiplicity of the species terms in a complex *C*, and *μ*(*α*; *C*) the multiplicity of a species _α_ in _C_.
 
 The expression assigned to _α'_ in its field definition is the sum of terms _κᵢ_·Π*Lᵢ*·(*μ*(*α*; *Rᵢ*) - *μ*(*α*; *Lᵢ*)) for each reaction i.
 
@@ -885,9 +904,11 @@ A _boolean-expr_ may not involve any boolean or comparison operations, and be eq
 >
 > _algebraic-term_ ::= _algebraic-factor_ ( ( ***multiplication-dot*** | ***asterisk*** | ***division-slash*** ) _algebraic-factor_ )*
 >
-> _algebraic-factor_ ::= _quantity-literal_ | ( ***minus-sign***? ( _function-application_ | _qualified-identifer_ | _record-field-expr_ | ***numeric-literal*** | `(` _expression_ `)` ) _algebraic-exponent_ )
+> _algebraic-factor_ ::= _quantity-literal_ | ( ***minus-sign*** | ***square-root*** )* _algebraic-base_ _algebraic-exponent_? )
 >
-> _algebraic-exponent_ ::= ***superscript-literal*** | ( `^` _algebraic-factor_ )*
+> _algebraic-base_ ::= _function-application_ | _qualified-identifer_ | _record-field-expr_ | ***numeric-literal*** | `(` _expression_ `)`
+>
+> _algebraic-exponent_ ::= ***superscript-literal*** | ( `^` _algebraic-factor_ )+
 
 Additive operators `+` and `-` and multiplicative operators `*` (or `·`) and `/` are all left associative. Multiplicative operators have higher precedence than additive operators.
 
@@ -895,7 +916,11 @@ An additive expression of the form `expr₁ + expr₂` or `expr₁ - expr₂` is
 
 A multiplicative expression of the form `expr₁·expr₂` or `expr₁/expr₂` is well defined if `expr₁` and `expr₂` have types _T₁_ and _T₂_ respectively, both of which are quantity types. The resultant type is the quantity-type _T₁·T₂_ or _T₁/T₂_ accordingly.
 
-A power expression of the form `expr₁^expr₂` is well formed iff `expr₁` and `expr₂` are both of type real or `expr₁` has a quantity type and `expr₂` is an integer valued constant expression. A power expression with a superscript exponent is defined similarly.
+A power expression of the form `expr₁^expr₂` is well formed iff `expr₁` and `expr₂` are both of type real or `expr₁` has a quantity type and `expr₂` is an integer valued constant expression (but see [Fractional powers for quantities and units](#fractional-powers-for-quantities-and-units)). A power expression with a superscript exponent is defined similarly.
+
+Unary minus is arithmetically equivalent to multiplication by minus one; in particular, if _x_ in the expression `-x` is a value with offset type, it is interpreted as a difference quantity, not an absolute quantity, and any offset is ignored.
+
+The square root is introduced by ***square-root*** , and an expression `√x` is arithmetically equivalent to `x^(1/2)`.
 
 The value of an additive, multiplicative or power expression follows the usual calculi of physical quantities (for one of a number of formal treatmes, see for example, P Szekeres, _The mathematical foundations of dimensional analysis and the question of fundamental units_, International Journal of Theoretical Physics 17 no. 12 (1978), doi:10.1007/BF00678423, pp. 957–974).
 
@@ -929,6 +954,7 @@ Where this is ambiguity in expression parsing, operators should be considered in
 | _f_`(`…`)`                 | Function application     | left          | [1](#precedence-note-1) |
 | _x_`^`_y_, _xʲ_            | Exponentiation           | right         | [2](#precedence-note-2) |
 | `-`                        | Unary minus              | right         | [3](#precedence-note-3) |
+| `√`                        | Square root              | right         | [3](#precedence-note-3) |
 | _x_`·`_y_, _x_`/`_y_       | Product, quotient        | left          | |
 | _x_`+`_y_, _x_`-`_y_       | Sum, difference          | left          | |
 | `⊔`                        | Preferential union       | left          | |
@@ -948,8 +974,36 @@ Notes:
 
 2. <a id="precedence-note-2"/> Multiple exponentiation by superscript literal should be prohibited by the _alegebraic-exponent_ syntax rule.
 
-3. <a id="precedence-note-3"/> Multiple adjacent unary minus operators should be perohibited by the _algebraic-factor_ syntax rule.
+3. <a id="precedence-note-3"/> Multiple adjacent unary minus operators should be prohibited by the _algebraic-factor_ syntax rule.
 
+
+### Built-in functions
+
+Arblang includse some predefined real functions, already bound in each module scope:
+
+| Function           | Operation                                               |
+|--------------------|---------------------------------------------------------|
+| `abs(x: real)`     | Absolute value \|*x*\|                                  |
+| `sin(x: real)`     | Sine of _x_ in radians                                  |
+| `cos(x: real)`     | Cosine of _x_ in radians                                |
+| `tan(x: real)`     | Tangent of _x_ in radians                               |
+| `asin(x: real)`    | Inverse sine in range [-π/2, π/2]                       |
+| `acos(x: real)`    | Inverse cosine in range [0, π]                          |
+| `atan(x: real)`    | Inverse tangent in range (-π/2, π/2)                    |
+| `exp(x: real)`     | Natural exponential e^x of _x_                          |
+| `expm1(x: real)`   | *e*^*x* - 1 (for small *x*)                             |
+| `exprel(x: real)`  | Relative exponential ₁F₁(1; 2; *x*) = (*e*^*x* - 1)/*x* |
+| `exprelr(x: real)` | Reciprocal relative exponential 1/₁F₁(1; 2; *x*)        |
+| `log(x: real)`     | Natural logarithm of _x_                                |
+| `logp1(x: real)`   | log(*x* + 1) (for small *x*)                            |
+| `sinh(x: real)`    | Hyperbolic sine of _x_                                  |
+| `cosh(x: real)`    | Hyperbolic cosine of _x_                                |
+| `tanh(x: real)`    | Hyperbolic tangent of _x_                               |
+| `asinh(x: real)`   | Inverse hyperbolic sine  of _x_                         |
+| `acosh(x: real)`   | Inverse hyperbolic cosine  of _x_                       |
+| `atanh(x: real)`   | Inverse hyperbolic tangent of _x_                       |
+
+In addition, it provides the function `nernst(z: real, T: temperature, Cinner: concentration, Couter: concentration)` defined as _R_·_T_/_z_·(log _Cinner_ - log _Couter_), where _R_ is the molar gas constant as defined in the 2019 SI units as exactly 8.314'462'618'153'24 J/K/mol.
 
 ## Modules and interfaces
 <a id="modules-and-interfaces"/>
@@ -1214,6 +1268,30 @@ Within an interface block, there are specific points within the permitted syntax
 
 In addition, the set of possible interface classes can be extended. An example would be to add stateful gap junctions.
 
+## Default modules
+
+Rather than having functions such as `exp` and constant such as `π` bound by default in module scopes, built-in functions and constants could be moved to a module that is always provided by the environment. This module name can be freely chosen, but suggestions have included: `common`, `std`, `prelude`. `arblang` is another possibility.
+
+Importing many constants or functions from a module may be tedious: either the qualified name is used, or each must be introduced via a `def` or `let` binding. A possible extension to arblang would be to permit `with M;` to introduce local bindings for all constants and functions defined in a module imported as _M_, in an expression scope.
+
+Possible example:
+```
+module foo {
+    import common
+
+    # Using a qualified name:
+    def a = common.cos(common.π/5);
+
+    # Explicit bindiings:
+    def cos = common.cos;
+    def π = common.π;
+    def b = cos(π/5);
+
+    # Using `with`:
+    def c = with common; cos(π/5);
+}
+```
+
 ## Alternative concentration model
 
 The concentration models described in [Mechanism semantics](#mechanism-semantics) are defined in terms of flow contributions, rather than in absolute concentrations, which is a departure from the NEURON NMODL approach.
@@ -1288,6 +1366,8 @@ Scales themselves would comprise a power of ten exponent and, if non-metric unit
 
 
 ## Fractional powers for quantities and units
+<a id="fractional-powers-for-quantities-and-units" /a>
+
 
 Rational powers of units and quantities can be mathematically and physically sound; in CGS electrostatic units, for example, charge has physical dimension M^(1/2)L^(3/2)T^(-1) with units 1 Fr = 1 dyn^(1/2)·cm.
 
@@ -1320,7 +1400,7 @@ Possible syntax:
 >
 > _range-limit_ ::= `[` _quantity-literal_ `,` _quantity-literal `]`
 
-(Where we add two new punctuation tokens for `[` and `]`.)
+(Where we add two new punctuation tokens for `[` and `]`, and for semi-bounded ranges `∞` or the contextual keyword `infinity`.)
 
 Example:
 
@@ -1352,4 +1432,17 @@ def branch_scale = fn (L: branch_length) → arctanh(L/20 mm);
 
 The derivative of a range-limited quantity would lose the range limit. In general, the type of an expression involving range-limited quantities would have the range deduced via interval arithmetic.
 
+Guarantees on run-time values falling within a range can be offered through new built-in operators for clamping a value to a range, or asserting that it lies within a range (and triggering an error state if it is not). Making up some new syntax:
 
+```
+# Clamp argument to non-negative real:
+def f = fn (a: real) → let a = a ↓ [0, ∞]; exp(a)-1;
+
+# Equivalent to:
+def f = fn (a: real) → let a = if a<0 then 0 else a; exp(a)-1;
+
+# 'Throw' an error if voltage is outside given range:
+def I = fn (v: voltage) → g*((v ! [-100 mV, 100 mV]) - e);
+```
+
+The benefit of using a new syntactical form is to make it clear that these do not behave like functions: the type of `a ↓ [10 m, 20 m]` is `[10 m, 20 m]` not `length`, and similarly for a range assertion `a ! [10 m, 20 m]`.
