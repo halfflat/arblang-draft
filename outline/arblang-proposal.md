@@ -2,7 +2,7 @@
 
 Arblang is a language for defining the dynamics and effects of Arbor 'mechanisms'. A mechanism is a stateful process whose evolution over time is governed by a system of ODEs and by responses to external events, and which in turn acts upon the cellular state to which the mechanism is applied.
 
-The arblang language is constrained so that every evolution and effect can be interpreted _symbolically_ as closed form expressions. This is to permit the automatic analysis of these expressions for the purposes of determining a priori analytic solutions or appropriate ODE approximation techniques, and to automatically determine, for example, time derivatives of effect values through symbolic or automatic differentiation. Consequently common programming constructs such as unbounded iteration or recursion are precluded.
+The Arblang language is constrained so that every evolution and effect can be interpreted _symbolically_ as closed form expressions. This is to permit the automatic analysis of these expressions for the purposes of determining a priori analytic solutions or appropriate ODE approximation techniques, and to automatically determine, for example, time derivatives of effect values through symbolic or automatic differentiation. Consequently common programming constructs such as unbounded iteration or recursion are precluded.
 
 Arblang nonetheless can also be interpreted in a purely numerical fashion in other contexts.
 
@@ -281,7 +281,7 @@ The value of a ***string-literal*** token does _not_ undergo NFKC normalization,
 
 > _punctuation_ ::=
 >     ***plus-sign*** | ***minus-sign*** | ***multiplication-dot*** | ***division-slash*** | ***exponent-op*** | ***preferential-union*** |
->     ***compare-equal*** | ***compare-not-equal*** | ***compare-less*** | ***compare-less-eqaul*** | ***compare-greater*** | ***compare-greater-eqaul*** |
+>     ***compare-equal*** | ***compare-not-equal*** | ***compare-less*** | ***compare-less-equal*** | ***compare-greater*** | ***compare-greater-equal*** |
 >     ***left-arrow*** | ***right-arrow*** | ***right-left-arrow*** | ***empty-set*** | ***square-root*** |
 >     ***assign-equal*** | ***semicolon*** | ***left-paren*** | ***right-paren*** | ***left-brace*** | ***right-brace*** |
 >     ***colon*** | ***bar*** | ***comma*** | ***period***
@@ -350,17 +350,17 @@ Punctuation tokens have no value.
 
 
 # Arblang syntax and semantics
-<a id="arblang-syntax-and-semantics"/>
+<a id="Arblang-syntax-and-semantics"/>
 
 The syntax definitions below are defined in terms of the tokens defined in the lexical grammar, with the following conventions:
 
 * A ***symbol*** token can represent an identifier or a keyword; keywords in the syntax descriptions are written in `monospace`, and should be interpreted as ***symbol*** tokens with the corresponding value.
 
-* Where ***whitespace*** is present in a syntax rule, it is required, but additional ***whitespace*** tokens are permitted anywhere in the (tokenized) arblang source, where they are ignored.
+* Where ***whitespace*** is present in a syntax rule, it is required, but additional ***whitespace*** tokens are permitted anywhere in the (tokenized) Arblang source, where they are ignored.
 
 * For readability in syntax rules, the text representation of a punctuation token, styled monospace, may stand in for the punctuation token itself. So, for example, `=` might stand for the token ***assign-equal***.
 
-An arblang source document comprises a series of module and interface definitions.
+An Arblang source document comprises a series of module and interface definitions.
 
 > _source_ ::= ( _module-defn_ | _interface-defn_ )+
 
@@ -388,7 +388,7 @@ Identifiers are represented by ***symbol*** tokens and depending on context, may
 The association of an identifier with its referent is called a _binding_, and that binding is valid only within a _scope_. With one exception for regime names, an identifier's scope does not precede the point where that identifier is introduced by some declaration or binding.
 
 **Global scope.**
-A module definition introduces the module name into the following global scope. The environment may also introduce module names defined in other arblang sources.
+A module definition introduces the module name into the following global scope. The environment may also introduce module names defined in other Arblang sources.
 
 **Module scope.**
 Within a module or interface definition, top-level parameter, constant, type alias, and function definitions have module scope, as do module imports and external bindings. The scope extends from after the definition or import, until the end of the enclosing module or interface. Identifiers bound in module scope can be made visible in other modules as a _qualified-identifier_ after a module import.
@@ -410,7 +410,7 @@ Scope form a hierarchy of inner and outer scopes, with the outermost scope being
 ### Context
 <a id="context"/>
 
-Two different identifiers with the same ***symbol*** may be bound in the same scope, if they are in different _contexts_. There are five distinct contexts in arblang:
+Two different identifiers with the same ***symbol*** may be bound in the same scope, if they are in different _contexts_. There are five distinct contexts in Arblang:
 
 1. _Module_ context applies wherever a module name is being introduced in a module definition, or where a module is referenced in a module import clause.
 2. _Type context_ applies in type expressions and where a type alias is introduced.
@@ -430,8 +430,8 @@ An identifier bound in a given context in an outer scope may be _masked_ by a bi
 
 It is otherwise an error to bind an identifier with the same ***symbol*** as an already bound identifier in the same context.
 
-### Qualified identifers
-<a id="qualified-identifers"/>
+### Qualified identifiers
+<a id="qualified-identifiers"/>
 
 A qualified identifier is a term of the form:
 
@@ -553,7 +553,7 @@ The boolean literals are keywords in an expression context, and may not be used 
 
 Quantities represent physical quantities, which in turn comprise a magnitude and a physical dimension. The specific unit scale underlying the representation of a physical quantity is implicit.
 
-A quantity type is defined as a product term of named quantities such as voltage, time, resistance, etc. The set of named quantities is predefined, and cannot be extended within arblang.
+A quantity type is defined as a product term of named quantities such as voltage, time, resistance, etc. The set of named quantities is predefined, and cannot be extended within Arblang.
 
 > _quantity-term_ ::= _quantity-name_ _integer-exponent_? | _quantity-product_ | _quantity-quotient_
 >
@@ -602,7 +602,7 @@ The named quantities above are chosen to represent ISQ quantities, but in some c
 | `conductance`  |                           | 80000-6      | **L⁻²M⁻¹T³I²** |
 | `molarity`     | amount-of-substance concentration | 80000-9 | **L⁻³N**    |
 
-For arblang, two quantity type expressions are deemed equivalent if they have the same physical dimensionality. Equivalent type expressions describe the same type.
+For Arblang, two quantity type expressions are deemed equivalent if they have the same physical dimensionality. Equivalent type expressions describe the same type.
 
 Quantity literals are composed from a ***numeric-literal*** and an optional _unit-term_ suffix. Units are represented by keywords corresponding to combinations of SI unit prefixes and SI unit abbreviations, and similarly to quantities, are composed via multiplication, division, and integer exponentiation. If no _unit-term_ suffix is present, the quantity is a scalar `real` type (i.e. a quantity of dimension one).
 
@@ -650,7 +650,7 @@ Unit prefixes are SI unit prefix symbols, with the addition of `u` for micro-:
 | `z`  | zepto | 10⁻²¹ |
 | `y`  | yocto | 10⁻²⁴ |
 
-Arblang metric units, and their corresponding arblang quantities:
+Arblang metric units, and their corresponding Arblang quantities:
 
 | Unit  | Name    | Arblang quantity |
 |-------|---------|------------------|
@@ -679,7 +679,7 @@ Arblang metric units, and their corresponding arblang quantities:
 
 Note that the non-SI unit 'molar' is equal to 1 mol/L.
 
-As a possible extension, arblang might support non-zero based units such as degrees Celsius °C. Doing so, however, complicates the algebra; refer to the [appendix](#extension-offset-values-and-affine-spaces).
+As a possible extension, Arblang might support non-zero based units such as degrees Celsius °C. Doing so, however, complicates the algebra; refer to the [appendix](#extension-offset-values-and-affine-spaces).
 
 #### Magnitudes
 
@@ -732,7 +732,7 @@ r.b
 Field values in a record are accessed via a qualified identifier (see [Qualified identifiers](#qualified-identifiers) above), or by immediate field access (see [Record expressions](#record-expressions) below), or brought into scope via a `with` binding (see [Value bindings](#value-bindings), below).
 
 ```
-let r = { a = 4; }; r.a   # qualified identifer evalates to value 4
+let r = { a = 4; }; r.a   # qualified identifier evalates to value 4
 let x = { a = 4; }.a; x   # immediate field access evalates to value 4
 with { a = 4; }; a        # a is locally bound to the value 4
 ```
@@ -787,13 +787,13 @@ The record literal is then algebraically equivalent to the following.
 ### Functions
 <a id="functions"/>
 
-A function literal gives a value of a function type. Function types have no representation in the arblang source language, and so cannot be used in type assertions, or in function arguments. Function literals may only appear in _function-application_ expressions or as the bound value in a _let-binding_ or module _function-defn_.
+A function literal gives a value of a function type. Function types have no representation in the Arblang source language, and so cannot be used in type assertions, or in function arguments. Function literals may only appear in _function-application_ expressions or as the bound value in a _let-binding_ or module _function-defn_.
 
 > _function-literal_ ::= `fn` `(` ( _function-arg_ ( `,` _function-arg_ )* )? `)` ***right-arrow*** _expression_ | `(` _function-literal_ `)`
 >
 > _function-arg_ ::= ***symbol*** _type-assertion_
 
-The identifiers introduced by _function-arg_ clauses have function scope which comprises the final defining expression. These are bound to parameter values in a function call expression (see _Expressions_ below). The final expression may be of any non-function type.
+The identifiers introduced by _function-arg_ clauses have function scope which comprises the final defining expression. These are bound to parameter values in a function call expression (see _Expressions_ below). The final expression may be of any non-function type, but may involve identifiers bound only to: other functions, _parameter-constant_ expressions, or the function arguments. In particular, the expression may not contain identifiers bound to an interface _bindable_.
 
 
 ## Expressions
@@ -805,9 +805,9 @@ The expression syntax below is ambiguous in that, for example, a function applic
 
 An expression with type assertion of the form `expr: T` is valid if the type of `expr` is `T` or a supertype of `T`, and ill-formed otherwise. The type of `expr: T`, if well-formed, is always the type `T`.
 
-Each identifier or qualified identifier in an expression must be bound (in the context determined by its occurance). In expression context, the identifier or qualified identifier may be bound to a function argument, to another expression via a value binding in an outer expression, to a record field, to a module constant or function definition, to a module parameter, or to an external quantity via an interface binding.
+Each identifier or qualified identifier in an expression must be bound (in the context determined by its occurrence). In expression context, the identifier or qualified identifier may be bound to a function argument, to another expression via a value binding in an outer expression, to a record field, to a module constant or function definition, to a module parameter, or to an external quantity via an interface binding.
 
-An expression is a _constant_ expression if every identifier in the expression is bound to a module constant or another constant expression, and if every function application subexpression has a value that is a constant expression. Similarly, an expression is _parameter-constant_ if every identifier is boound to a module constant or parameter, or another parameter-constant expression, and if every function application has a value that is parameter-constant expression.
+An expression is a _constant_ expression if every identifier in the expression is bound to a module constant or another constant expression, and if every function application subexpression has a value that is a constant expression. Similarly, an expression is _parameter-constant_ if every identifier is bound to a module constant or parameter, or another parameter-constant expression, and if every function application has a value that is parameter-constant expression.
 
 ### Value bindings
 <a id="value-bindings"/>
@@ -878,7 +878,7 @@ As with value bindings, there is no semantic ambiguity arising from an ambiguous
 >
 > _comparison-expr_ ::= _comparison-base_ _comparison-op_ _comparison-base_
 >
-> _comparison-op_ ::= ***compare-equal*** | ***compare-not-equal*** | ***compare-less*** | ***compare-less-equal*** | ***compare-greater*** | ***compare-greater-eqaul***
+> _comparison-op_ ::= ***compare-equal*** | ***compare-not-equal*** | ***compare-less*** | ***compare-less-equal*** | ***compare-greater*** | ***compare-greater-equal***
 >
 > _comparison-base_ ::= _algebraic-expr_ | `(` _expression_ `)`
 
@@ -906,7 +906,7 @@ A _boolean-expr_ may not involve any boolean or comparison operations, and be eq
 >
 > _algebraic-factor_ ::= _quantity-literal_ | ( ***minus-sign*** | ***square-root*** )* _algebraic-base_ _algebraic-exponent_? )
 >
-> _algebraic-base_ ::= _function-application_ | _qualified-identifer_ | _record-field-expr_ | ***numeric-literal*** | `(` _expression_ `)`
+> _algebraic-base_ ::= _function-application_ | _qualified-identifier_ | _record-field-expr_ | ***numeric-literal*** | `(` _expression_ `)`
 >
 > _algebraic-exponent_ ::= ***superscript-literal*** | ( `^` _algebraic-factor_ )+
 
@@ -970,7 +970,7 @@ Where this is ambiguity in expression parsing, operators should be considered in
 
 Notes:
 
-1. <a id="precedence-note-1"/> Function application can be considered left associative in accordance with mathematical convention, but it cannot arise while function values are unable to be returned from an arblang function.
+1. <a id="precedence-note-1"/> Function application can be considered left associative in accordance with mathematical convention, but it cannot arise while function values are unable to be returned from an Arblang function.
 
 2. <a id="precedence-note-2"/> Multiple exponentiation by superscript literal should be prohibited by the _alegebraic-exponent_ syntax rule.
 
@@ -1135,7 +1135,7 @@ def b: real = 2*sq(P);
 >
 > _interface-class_ ::= `density` | `discrete` | `concentration`
 >
-> _interface-decl_ ::= _module-decl_ | _export_ | _export-parameter-defn_ | _interface-binding_ | _effect-defn_ | _initial-defn_ | _regime-defn_ | _regime-decl_
+> _interface-decl_ ::= _module-decl_ | _export_ | _export-parameter-defn_ | _external-binding_ | _effect-defn_ | _initial-defn_ | _regime-defn_ | _regime-decl_
 >
 > _export_ ::= `export` _export-qualifier_* `parameter` _qualified-identifier_ _type-assertion_? ( `as` ***symbol*** )?
 >
@@ -1143,7 +1143,7 @@ def b: real = 2*sq(P);
 >
 > _export-qualifier_ ::= `density`
 >
-> _interface-binding_ ::= `bind` _identifer_ _type-assertion_? = _bindable_ `;`
+> _external-binding_ ::= `bind` _identifier_ _type-assertion_? = _bindable_ `;`
 >
 > _bindable_ ::= `state` | `membrane` `potential` | `temperature` | (`current` `density` | `molar` `flux`) _species-name_ | (`internal` | `external`) `concentration` _species-name_ | `charge` _species-name_
 >
@@ -1165,7 +1165,7 @@ def b: real = 2*sq(P);
 >
 > _effect-defn_ ::= `effect` _effect_ = _expression_ `;`
 >
-> _effect_ ::= `current` `density` _species-name_? | `molar` `flow` `rate` _species-name_ | `current` _species-name_? | `molar` `flux` _species-name_ | (`internal` | `external`) `concentration` _species-name_
+> _effect_ ::= `current` `density` _species-name_? | `molar` `flux`_species-name_ | `current` _species-name_? | `molar` `flow` `rate` _species-name_ | (`internal` | `external`) `concentration` `rate` _species-name_
 >
 > _species-name_ ::= ***string-literal***
 
@@ -1193,7 +1193,7 @@ If the interface has no _initial-definition_ at all, the initial state is define
 
 A regime defines the dynamical evolution of the mechanism state, and the effects of the mechanism state on the cellular state. There is always a top-level, unnamed regime, but more regimes can be introduced with a _regime-defn_. Associated with each regime is an evolution definition and a set of conditions that determine behaviour upon an external event or the satisfaction of some predicate.
 
-A regime definition introduces a new regime scope: inner regimes may be given names that mask outer regime names, and regime transitions in `when` clauses can refer to regimes defined in outer scopes without further qualification. A transition can also refer to a regime in the interface by using a qualified identifer:
+A regime definition introduces a new regime scope: inner regimes may be given names that mask outer regime names, and regime transitions in `when` clauses can refer to regimes defined in outer scopes without further qualification. A transition can also refer to a regime in the interface by using a qualified identifier:
 
 ```
 regime A {
@@ -1214,7 +1214,7 @@ regime E {
 }
 ```
 
-If an evolution is not specified in a regime, the evolution will be that of the outer regime. Similarly, any effects defined in an an outer regime will apply, if the same effect is not defined within the inner regime. The topmost unnamed regime will implicitly define an evolution if none is provided: this implicit evolution will hold the state constant over time.
+If an evolution is not specified in a regime, the evolution will be that of the outer regime. Similarly, any effects defined in an outer regime will apply, if the same effect is not defined within the inner regime. The topmost unnamed regime will implicitly define an evolution if none is provided: this implicit evolution will hold the state constant over time.
 
 Any `when` conditions defined in an outer regime, including the topmost unnamed regime, still apply in inner regimes.
 
@@ -1222,7 +1222,7 @@ Any `when` conditions defined in an outer regime, including the topmost unnamed 
 
 When clauses are triggered when the mechanism state satisfies the corresponding predicate, or when an event of the appropriate type is delivered to the mechanism. The state is updated according to the `state = ` clause, and if a `regime` clause is present, the dynamics are shifted to the given regime.
 
-A given when clause associated with a regime _R_, with predicate _p_ applies at the point in time _t₁_ if the dynamnics are in regime _R_ at _t₁_, _p_(_t₁_) is true and either _p_(_t_) is false or dynamics were in a regime _R'_ without this when clause for _t_ ∈ (_t₁_-δ, _t₁_) for some δ>0. All predicates are considered false for _t_ &lt; 0.
+A given when clause associated with a regime _R_, with predicate _p_ applies at the point in time _t₁_ if the dynamics are in regime _R_ at _t₁_, _p_(_t₁_) is true and either _p_(_t_) is false or dynamics were in a regime _R'_ without this when clause for _t_ ∈ (_t₁_-δ, _t₁_) for some δ>0. All predicates are considered false for _t_ &lt; 0.
 
 If more than one when clause applies, they are applied in order of definition. Note that the effect of a when clause may cause a transition to a regime where the set of applicable when-clauses differs, whence the new set is considered in its stead. In any instance, no single when clause may be triggered more than once by the same event or, for predicate-based when clauses, at the same time.
 
@@ -1246,14 +1246,62 @@ On the first event, when clauses (A) and (B) will be triggered, transitioning to
 
 #### Evolution
 
-**TODO**
+An evolution definition determines how the mechanism state changes in time (up until any event or predicate triggers a when clause). In the initial version of Arblang, the only supported description of these dynamics is via an explicit ODE system of the form d*s*/d*t* = _f_(_s_; _p₁_, _p₂_, ...) where _s_ represent the state value and _p₁_, … are values associated with the cellular state and made available via a `bind` clause.
 
-#### Effects
+In a definition `evolve state' = expr;`, the right hand side `expr` must have the derivate type of the type of the mechanism state. It may depend upon any parameter, constant or bound identifier including the bound by default identifier `state`.
 
-**TODO**
+As an example, this adaption of an Allen Institute Kv3 channel model has state of type `{ m: real }`, and so the expression in the `evolve` definition must be of the derivative type `{ m': real/time }`.
+
+```
+interface density "Kv3" {
+    bind v = membrane potential;
+
+    def minf = fn (v: voltage) → 1/(1 + exp(-(v - 18.7 mV)/9.7 mV);
+    def mrate = fn (v: voltage) → 0.25 ms⁻¹ * (1+ exp(-(v + 46.56 mV)/44.14 mV));
+
+    export density parameter gbar = 10⁻⁵ S/cm²;
+    export parameter ek = -88 mV;
+
+    initial state = { m = minf(v); };
+    evolve state' = with state; { m' = (minf(v) - m)·mrate(v); };
+
+    effect current density "k" = gbar*(v-ek);
+}
+```
+
+#### Effects and external bindings
+
+Effects describe the effect of a mechanism's state on dynamics of the cell on which it acts. Some effects relate to a particular ion (or more generally, chemical species). Species names are described by string literals, and an effect depending upon a species will include that literal as the last part of the _effect_ clause within the definition.
+
+Possible [external bindings](#external-bindings) are aspects of the cellular state that can influence the cell evolution and the mechanism effects. Most may vary over time, though species charge in particular is guaranteed to be constant over the evolution of mechanism state.
+
+As noted in [Mechanisms](#mechanisms), not all effects and bindings are available to all interface classes. Permissible external bindings and effects and their quantity types are listed below, where _species_ is a placeholder for a string literal denoting a particular species.
+
+| External binding                     | Type               | Density? | Discrete? | Concentration? |
+|--------------------------------------|--------------------|----------|-----------|----------------|
+| `state`                              |                    | ✓        | ✓         | ✓              |
+| `membrane` `potential`               | `voltage`          | ✓        | ✓         | ✓              |
+| `temperature`                        | `temperature`      | ✓        | ✓         | ✓              |
+| `current` `density` _species_        | `current/area`     |          |           | ✓              |
+| `molar` `flux` _species_             | `amount/area/time` |          |           | ✓              |
+| `internal` `concentration` _species_ | `molarity`         | ✓        | ✓         | ✓              |
+| `external` `concentration` _species_ | `molarity`         | ✓        | ✓         | ✓              |
+| `charge` _species_                   | `real`             | ✓        | ✓         | ✓              |
 
 
-# Appendices
+| Effect                                      | Type               | Density? | Discrete? | Concentration? |
+|---------------------------------------------|--------------------|----------|-----------|----------------|
+| `current` `density`                         | `current/area`     | ✓        |           |                |
+| `current` `density` _species_               | `current/area`     | ✓        |           |                |
+| `molar` `flux` _species_                    | `amount/area/time` | ✓        |           |                |
+| `current`                                   | `current`          |          | ✓         |                |
+| `current` _species_                         | `current`          |          | ✓         |                |
+| `molar` `flow` `rate` _species_             | `amount/time`      |          | ✓         |                |
+| `internal` `concentration` `rate` _species_ | `molarity/time`    |          |           | ✓              |
+| `external` `concentration` `rate` _species_ | `molarity/time`    |          |           | ✓              |
+
+
+# Extensions and alternatives
 
 ## Magic keywords and interface extension points
 
@@ -1270,9 +1318,9 @@ In addition, the set of possible interface classes can be extended. An example w
 
 ## Default modules
 
-Rather than having functions such as `exp` and constant such as `π` bound by default in module scopes, built-in functions and constants could be moved to a module that is always provided by the environment. This module name can be freely chosen, but suggestions have included: `common`, `std`, `prelude`. `arblang` is another possibility.
+Rather than having functions such as `exp` and constant such as `π` bound by default in module scopes, built-in functions and constants could be moved to a module that is always provided by the environment. This module name can be freely chosen, but suggestions have included: `common`, `std`, `prelude`. `Arblang` is another possibility.
 
-Importing many constants or functions from a module may be tedious: either the qualified name is used, or each must be introduced via a `def` or `let` binding. A possible extension to arblang would be to permit `with M;` to introduce local bindings for all constants and functions defined in a module imported as _M_, in an expression scope.
+Importing many constants or functions from a module may be tedious: either the qualified name is used, or each must be introduced via a `def` or `let` binding. A possible extension to Arblang would be to permit `with M;` to introduce local bindings for all constants and functions defined in a module imported as _M_, in an expression scope.
 
 Possible example:
 ```
@@ -1345,17 +1393,17 @@ Alternative for type aliases for record types:
 
 Physical quantities can represent an absolute value, or a difference between absolute values. With an implicit identification between the two that takes an absolute value of zero to a zero difference, a single quantity can be used unambiguously in both contexts.
 
-If a quantity can be represented by different units which differ not just in scale but also in what their zero value reperesents as an absolute value, then only one of these units can be used to transparently represent both absolues and differences: the other unit must be converted by scaling in a difference context, but by scaling and an additive offset in an absolute value context.
+If a quantity can be represented by different units which differ not just in scale but also in what their zero value represents as an absolute value, then only one of these units can be used to transparently represent both absolutes and differences: the other unit must be converted by scaling in a difference context, but by scaling and an additive offset in an absolute value context.
 
-For arblang, this is the situation which arises if we have a unit such as degrees Celsius in addition to kelvin. Taking the zero kelvin as the zero base, a value in degrees Celsius must be translated when representing an absolute temperature, but not when representing a difference or displacement.
+For Arblang, this is the situation which arises if we have a unit such as degrees Celsius in addition to kelvin. Taking the zero kelvin as the zero base, a value in degrees Celsius must be translated when representing an absolute temperature, but not when representing a difference or displacement.
 
-Additive expressions involving quantities can be regarded as operations in affine space, with an implicit map between the vector space of translations and the affine space determined by a choice of origin. By convention, an expression _a_+_v_ in an affine space describes the action of a displacement _v_ on the point _a_, while _a_-_b_ describes the displacement _v_ that takes _b_ to _a_. Similarly, displacements can be multiplied by a scaling factor, but points in the affine space cannot. Putting this convention in place for arithmeitic epxression in arblang:
+Additive expressions involving quantities can be regarded as operations in affine space, with an implicit map between the vector space of translations and the affine space determined by a choice of origin. By convention, an expression _a_+_v_ in an affine space describes the action of a displacement _v_ on the point _a_, while _a_-_b_ describes the displacement _v_ that takes _b_ to _a_. Similarly, displacements can be multiplied by a scaling factor, but points in the affine space cannot. Putting this convention in place for arithmetic expressions in Arblang:
 
 1. _a_ + _b_ : translate _a_ to zero-based value and interpret _b_ as a displacement, e.g. 30 °C + 10 °C = 30 °C + 10 K = 303.15 K + 10 K = 313.15 K.
 2. _a_ - _b_ : translate _a_ and _b_ to zero-based values and take difference, e.g.  30 °C - 10 °C = 303.15 K - 283.15 K = 20 K.
-3. _a_ * _c_ : interpret _a_ as a displacent and multiply by _c_, e.g. 30 °C * 3 Hz = 30 K * 3 Hz = 90 K/s.
+3. _a_ * _c_ : interpret _a_ as a displacement and multiply by _c_, e.g. 30 °C * 3 Hz = 30 K * 3 Hz = 90 K/s.
 
-There are circumstances where this might be surpising: 30 °C - 2 K won't equal 28 °C. User code that uses units such as °C would have to be careful to write e.g. 30 °C + -2 K or similar, if that is the desired interpretation.
+There are circumstances where this might be surprising: 30 °C - 2 K won't equal 28 °C. User code that uses units such as °C would have to be careful to write e.g. 30 °C + -2 K or similar, if that is the desired interpretation.
 
 Implementation: a quantity value is represented not just by a magnitude and scale relative to an implicit base unit, but also with an offset. Writing the tuple as (_m_, _s_; _δ_) for magnitude, scale and offset, addition and subtraction between compatible quantities would proceed as the following, or equivalent:
 
